@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e1014">
+<title>ECE 109 · Probability Path</title>
+<style>
+:root{--bg:#0e1014;--panel:#161a21;--panel2:#1c2129;--line:#2a303b;--text:#e8eaf0;--muted:#8b92a3;--dim:#4b5262;--acc:#4fd1b5;--accd:rgba(79,209,181,.13);--slate:#8fa3c7}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif}
+#app{max-width:560px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.top{position:sticky;top:0;z-index:5;background:rgba(14,16,20,.94);backdrop-filter:blur(8px);display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.brand{font-weight:700;flex:1;line-height:1.2}
+.brand small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.pill{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-weight:650;font-size:14px;white-space:nowrap}
+.pill svg{width:16px;height:16px}
+.iconbtn{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);flex:none}
+.iconbtn svg{width:18px;height:18px}
+.main{padding:16px 16px 40px;flex:1}
+.today{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:16px;background:var(--panel);border:1px solid var(--line);margin-bottom:12px}
+.today .dot{width:10px;height:10px;border-radius:50%;background:var(--dim);flex:none}
+.today.done .dot{background:var(--acc)}
+.today p{margin:0;font-size:14px;color:var(--muted)}
+.today b{color:var(--text);font-weight:650}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
+.tile{padding:14px;border-radius:16px;background:var(--panel);border:1px solid var(--line);text-align:left;min-height:72px}
+.tile b{display:block;font-size:15px}
+.tile span{font-size:13px;color:var(--muted)}
+.tile:active{transform:scale(.98)}
+.track{margin:10px 0 26px}
+.trackhead{display:flex;align-items:baseline;justify-content:space-between;padding:12px 4px;border-top:1px solid var(--line)}
+.trackhead h2{margin:0;font-size:18px}
+.trackhead small{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:2px}
+.trackhead .count{color:var(--muted);font-size:13px}
+.path{position:relative;margin-top:8px}
+.path svg.conn{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.node{position:absolute;width:150px;margin-left:-75px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.node .disc{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-weight:750;font-size:18px;background:var(--panel2);border:2px solid var(--line);color:var(--muted);position:relative}
+.node .disc svg{width:24px;height:24px}
+.node.done .disc{background:var(--acc);border-color:var(--acc);color:#06231d}
+.node.current .disc,.node.open .disc{background:var(--panel);border:3px solid var(--acc);color:var(--acc)}
+.node.current .disc::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid var(--acc);animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{0%{opacity:.75;transform:scale(.92)}100%{opacity:0;transform:scale(1.3)}}
+.node.locked .disc{color:var(--dim)}
+.node.soon .disc{border-style:dashed;color:var(--dim);background:transparent}
+.node .lbl{font-size:12.5px;text-align:center;color:var(--muted);line-height:1.25}
+.node.done .lbl,.node.current .lbl,.node.open .lbl{color:var(--text)}
+.node.soon .lbl{color:var(--dim)}
+.node button{display:flex;flex-direction:column;align-items:center;gap:6px}
+.node button:disabled{cursor:default}
+.node .tag{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+
+/* lesson */
+.lhead{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;gap:12px;padding:14px 16px}
+.bar{flex:1;height:10px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width .35s ease}
+.lbody{padding:4px 16px 20px;flex:1}
+.kicker{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--acc);font-weight:700;margin:6px 0 10px}
+.viz{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;position:relative;touch-action:manipulation}
+.viz canvas{display:block}
+.viz+.viz{margin-top:10px}
+h3.ttl{margin:16px 0 6px;font-size:19px}
+.txt{color:#c9ced8;margin:6px 0 0;font-size:15.5px}
+.prompt{font-size:17px;font-weight:600;margin:14px 0 12px;line-height:1.4}
+.cap{font-size:14px;color:var(--muted);margin:8px 2px 0;min-height:21px}
+.cap b{color:var(--text)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 2px 0;font-size:13px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{padding:9px 13px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:14px;font-weight:550;min-height:40px}
+.chip.on{background:var(--accd);border-color:var(--acc);color:var(--acc)}
+.ctrls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.cbtn{padding:10px 14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);font-weight:650;font-size:14px;min-height:44px}
+.cbtn.pri{background:var(--acc);color:#06231d;border-color:var(--acc)}
+.sl{margin-top:12px}
+.sl label{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin-bottom:4px}
+.sl label b{color:var(--text);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--acc);height:28px}
+.opts{display:grid;gap:10px}
+.opts.pics{grid-template-columns:repeat(3,1fr)}
+.opt{width:100%;text-align:left;padding:15px 16px;border-radius:14px;background:var(--panel);border:2px solid var(--line);font-size:16px;font-weight:550;min-height:54px;transition:border-color .15s,background .15s}
+.opts.pics .opt{padding:6px;text-align:center}
+.opts.pics .opt .viz{border:0;background:transparent}
+.opts.pics .opt small{display:block;font-size:12px;color:var(--muted);padding:2px 0 4px}
+.opt.sel{border-color:var(--text);background:var(--panel2)}
+.opt.right{border-color:var(--acc);background:var(--accd)}
+.opt.picked{border-color:var(--dim);opacity:.7}
+.opt:disabled{cursor:default}
+.lfoot{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 18px);padding:22px 16px calc(16px + env(safe-area-inset-bottom))}
+.fb{border-radius:14px;padding:12px 14px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line);font-size:15px;animation:up .25s ease}
+.fb.good{border-color:var(--acc)}
+.fb h4{margin:0 0 4px;font-size:15px}
+.fb.good h4{color:var(--acc)}
+.fb p{margin:0;color:#c9ced8}
+@keyframes up{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+.btn{display:block;width:100%;padding:16px;border-radius:14px;font-weight:750;font-size:16px;background:var(--acc);color:#06231d;text-align:center;min-height:54px}
+.btn:disabled{background:var(--panel2);color:var(--dim)}
+.btn.ghost{background:var(--panel);color:var(--text);border:1px solid var(--line)}
+.formula{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-top:10px}
+.formula .f{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;font-size:20px;color:var(--text);overflow-x:auto;white-space:nowrap;padding:4px 0}
+.formula .n{font-size:14px;color:var(--muted);margin-top:4px}
+/* done screen */
+.done{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 20px;text-align:center}
+.done svg.check{width:110px;height:110px}
+.done .ring{stroke:var(--acc);stroke-width:5;fill:none;stroke-dasharray:302;stroke-dashoffset:302;animation:draw .6s ease forwards}
+.done .tick{stroke:var(--acc);stroke-width:6;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:80;stroke-dashoffset:80;animation:draw .35s .55s ease forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.done h2{margin:18px 0 6px;font-size:24px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;margin:20px 0 26px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 6px}
+.stat b{display:block;font-size:22px;color:var(--acc)}
+.stat span{font-size:12px;color:var(--muted)}
+.note{color:var(--muted);font-size:14px;margin:0}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet>div{background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:560px;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 12px}
+.sheet .rowt{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);gap:12px}
+.sheet .rowt p{margin:0;font-size:13px;color:var(--muted)}
+.sw{width:50px;height:30px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--muted);transition:.2s}
+.sw.on{background:var(--accd);border-color:var(--acc)}
+.sw.on::after{left:23px;background:var(--acc)}
+.labsec{margin-bottom:30px}
+.labsec h3{margin:0 0 4px}
+.labsec p{margin:0 0 10px;color:var(--muted);font-size:14px}
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+/* ============ core helpers ============ */
+const TAU=Math.PI*2, FONT='-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif';
+const C={bg:'#0e1014',panel:'#161a21',text:'#e8eaf0',muted:'#8b92a3',dim:'#4b5262',grid:'#232934',line:'#2f3643',acc:'#4fd1b5',b:'#8fa3c7',ink:'#06231d'};
+const acc=a=>`rgba(79,209,181,${a})`, slate=a=>`rgba(143,163,199,${a})`;
+const app=document.getElementById('app');
+let live=[];
+function cleanup(){live.forEach(f=>{try{f()}catch(e){}});live=[];}
+function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;}
+function T(ctx,s,x,y,o={}){ctx.save();ctx.font=`${o.w||500} ${o.s||13}px ${FONT}`;ctx.fillStyle=o.c||C.text;ctx.textAlign=o.a||'center';ctx.textBaseline=o.bl||'middle';ctx.fillText(String(s),x,y);ctx.restore();}
+function rr(ctx,x,y,w,h,r){ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,w,h,Math.max(0,Math.min(r,w/2,h/2)));else ctx.rect(x,y,w,h);}
+function hatch(ctx,x,y,w,h,col){ctx.save();ctx.strokeStyle=col||'rgba(14,16,20,.5)';ctx.lineWidth=1.6;ctx.beginPath();for(let k=-h;k<w;k+=7){ctx.moveTo(x+k,y+h);ctx.lineTo(x+k+h,y);}ctx.stroke();ctx.restore();}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+const fmt=(v,d=2)=>{let s=(+v).toFixed(d);if(s.includes('.'))s=s.replace(/\.?0+$/,'');return(s==='-0'||s==='')?'0':s;};
+
+function mkCanvas(host,h,draw,opt={}){
+  const wrap=el('div','viz'),cv=document.createElement('canvas');wrap.appendChild(cv);host.appendChild(wrap);
+  const ctx=cv.getContext('2d');let W=0,H=0;
+  function size(){const w=Math.max(200,wrap.clientWidth||320);const dpr=Math.min(3,window.devicePixelRatio||1);W=w;H=typeof h==='function'?Math.round(h(w)):h;cv.width=Math.round(w*dpr);cv.height=Math.round(H*dpr);cv.style.width=w+'px';cv.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0);}
+  function redraw(){if(!W)size();ctx.clearRect(0,0,W,H);draw(ctx,W,H);}
+  let lastW=-1;
+  const ro=new ResizeObserver(()=>{const w=wrap.clientWidth;if(w!==lastW){lastW=w;size();redraw();}});ro.observe(wrap);live.push(()=>ro.disconnect());
+  if(opt.onTap){wrap.style.cursor='pointer';wrap.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();opt.onTap(e.clientX-r.left,e.clientY-r.top,W,H);});}
+  return {wrap,redraw,get W(){return W},get H(){return H}};
+}
+function chips(host,names,active,onSel){
+  const box=el('div','chips');const bs=names.map((n,k)=>{const b=el('button','chip'+(k===active?' on':''),n);b.onclick=()=>{set(k);onSel(k);};box.appendChild(b);return b;});
+  function set(k){bs.forEach((b,i)=>b.classList.toggle('on',i===k));}
+  host.appendChild(box);return {set};
+}
+function slider(host,label,min,max,step,val,onIn,f=v=>v){
+  const w=el('div','sl');const lb=el('label',null,`<span>${label}</span><b>${f(val)}</b>`);const r=el('input');r.type='range';r.min=min;r.max=max;r.step=step;r.value=val;
+  r.oninput=()=>{lb.querySelector('b').textContent=f(+r.value);onIn(+r.value);};w.append(lb,r);host.appendChild(w);return r;
+}
+function ctrlBtn(host,label,fn,pri){const b=el('button','cbtn'+(pri?' pri':''),label);b.onclick=fn;host.appendChild(b);return b;}
+function legend(host,items){const d=el('div','legend');items.forEach(([c,t])=>{d.appendChild(el('span',null,`<i style="background:${c}"></i>${t}`));});host.appendChild(d);}
+
+/* ============ drawing primitives ============ */
+function gridGeom(W,H){const pad=22;const s=Math.floor(Math.min((W-pad-10)/6,(H-pad-6)/6));const gw=s*6;const x0=Math.round((W-gw+pad)/2);return {s,x0,y0:pad};}
+function diceHit(W,H,x,y){const g=gridGeom(W,H);const i=Math.floor((x-g.x0)/g.s)+1,j=Math.floor((y-g.y0)/g.s)+1;return(i>=1&&i<=6&&j>=1&&j<=6)?[i,j]:null;}
+function drawDice(ctx,W,H,o={}){
+  const g=gridGeom(W,H),s=g.s;
+  for(let i=1;i<=6;i++){T(ctx,i,g.x0+(i-.5)*s,g.y0-10,{s:11,c:C.muted});T(ctx,i,g.x0-11,g.y0+(i-.5)*s,{s:11,c:C.muted});}
+  for(let i=1;i<=6;i++)for(let j=1;j<=6;j++){
+    const x=g.x0+(i-1)*s,y=g.y0+(j-1)*s;const a=o.A&&o.A(i,j),b=o.B&&o.B(i,j),f=o.fade&&o.fade(i,j);
+    ctx.globalAlpha=f?.14:1;rr(ctx,x+1.5,y+1.5,s-3,s-3,5);ctx.fillStyle=a?acc(.85):b?slate(.42):C.grid;ctx.fill();
+    if(a&&b){ctx.lineWidth=3;ctx.strokeStyle=C.b;ctx.stroke();}
+    if(o.hl&&o.hl(i,j)){ctx.save();rr(ctx,x+1.5,y+1.5,s-3,s-3,5);ctx.clip();hatch(ctx,x,y,s,s);ctx.restore();rr(ctx,x+1.5,y+1.5,s-3,s-3,5);ctx.lineWidth=2.5;ctx.strokeStyle='#fff';ctx.stroke();}
+    const lab=o.label?o.label(i,j):(o.sums?i+j:null);
+    if(lab!=null)T(ctx,lab,x+s/2,y+s/2+.5,{s:Math.max(9,Math.min(14,s*.32)),w:600,c:a?C.ink:C.muted});
+    ctx.globalAlpha=1;
+  }
+}
+function vennG(W,H,o={}){const ux=8,uy=8,uw=W-16,uh=H-16;const r=Math.min(uh*.37,uw*(o.disjoint?.17:.21));const d=o.disjoint?r*2.6:r*1.15;const cy=uy+uh/2+6;return{ux,uy,uw,uh,A:{x:W/2-d/2,y:cy,r},B:{x:W/2+d/2,y:cy,r},d};}
+function clipC(ctx,g,c,inside){ctx.beginPath();if(!inside)ctx.rect(g.ux-2,g.uy-2,g.uw+4,g.uh+4);ctx.moveTo(c.x+c.r,c.y);ctx.arc(c.x,c.y,c.r,0,TAU);ctx.clip(inside?'nonzero':'evenodd');}
+function region(ctx,g,reg,fn){ctx.save();ctx.beginPath();ctx.rect(g.ux,g.uy,g.uw,g.uh);ctx.clip();clipC(ctx,g,g.A,reg==='A'||reg==='AB');clipC(ctx,g,g.B,reg==='B'||reg==='AB');fn();ctx.restore();}
+function drawVenn(ctx,W,H,o={}){
+  const g=vennG(W,H,o);
+  rr(ctx,g.ux,g.uy,g.uw,g.uh,12);ctx.fillStyle='#12161c';ctx.fill();ctx.strokeStyle=C.line;ctx.lineWidth=1;ctx.stroke();
+  (o.shade||[]).forEach(r=>region(ctx,g,r,()=>{ctx.fillStyle=acc(.62);ctx.fillRect(0,0,W,H);}));
+  (o.hl||[]).forEach(r=>region(ctx,g,r,()=>{ctx.fillStyle=acc(.95);ctx.fillRect(0,0,W,H);hatch(ctx,0,0,W,H);}));
+  [['A',g.A],['B',g.B]].forEach(([n,c])=>{ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,TAU);ctx.lineWidth=(o.thick===n)?3.5:1.6;ctx.strokeStyle=(o.thick===n)?'#fff':'rgba(232,234,240,.75)';ctx.stroke();
+    T(ctx,n,c.x+(n==='A'?-1:1)*c.r*.78,c.y-c.r*.86,{s:16,w:700,a:n==='A'?'right':'left'});});
+  T(ctx,'S',g.ux+14,g.uy+14,{s:12,w:600,c:C.muted});
+  if(o.vals){const v=o.vals,r=g.A.r;const pos={A:[o.disjoint?g.A.x:g.A.x-r*.42,g.A.y],B:[o.disjoint?g.B.x:g.B.x+r*.42,g.B.y],AB:[(g.A.x+g.B.x)/2,g.A.y],N:[g.ux+g.uw-26,g.uy+g.uh-16]};
+    for(const k in v)if(pos[k])T(ctx,v[k],pos[k][0],pos[k][1],{s:14,w:700,c:'#fff'});}
+}
+function drawMosaic(ctx,W,H,o){
+  const top=30,bot=o.bot||8;const s=Math.min(W-70,H-top-bot);const x0=(W-s)/2+(o.shift||0),y0=top;
+  ctx.fillStyle='#1b2029';ctx.fillRect(x0,y0,s,s);let x=x0;
+  o.cols.forEach(c=>{const w=c.w*s,hh=c.h*s;ctx.fillStyle=acc(.72);ctx.fillRect(x,y0+s-hh,w,hh);
+    if(c.hl){ctx.save();ctx.beginPath();ctx.rect(x,y0+s-hh,w,hh);ctx.clip();hatch(ctx,x,y0+s-hh,w,hh);ctx.restore();ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.strokeRect(x+1.5,y0+s-hh+1.5,w-3,hh-3);}
+    T(ctx,c.label,x+w/2,y0-17,{s:12,w:650,c:C.text});T(ctx,c.w,x+w/2,y0-5,{s:10,c:C.muted});
+    if(o.vals!==false&&hh>16&&w>26)T(ctx,c.note||c.h,x+w/2,y0+s-hh/2,{s:c.note?11:12,w:700,c:C.ink});
+    if(o.vals!==false&&hh<=16&&w>26)T(ctx,c.note||c.h,x+w/2,y0+s-hh-9,{s:11,w:700,c:C.text});
+    x+=w;ctx.strokeStyle=C.bg;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y0+s);ctx.stroke();});
+  ctx.strokeStyle=C.line;ctx.lineWidth=1;ctx.strokeRect(x0,y0,s,s);
+  if(o.dash){ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;let xx=x0;o.cols.forEach(c=>{const w=c.w*s;ctx.beginPath();ctx.moveTo(x0,y0+s-c.h*s);ctx.lineTo(x0+s,y0+s-c.h*s);ctx.stroke();xx+=w;});ctx.restore();}
+  if(o.yLabel)T(ctx,o.yLabel,x0-8,y0+s-12,{s:12,w:650,a:'right',c:C.acc});
+  return {x0,y0,s};
+}
+function axes(ctx,W,H,o){
+  const l=o.l??38,r=o.r??14,t=o.t??14,b=o.b??26;
+  const X=v=>l+(v-o.x0)/(o.x1-o.x0)*(W-l-r),Y=v=>H-b-(v-o.y0)/(o.y1-o.y0)*(H-t-b);
+  (o.yt||[]).forEach(v=>{ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(l,Y(v));ctx.lineTo(W-r,Y(v));ctx.stroke();T(ctx,o.yf?o.yf(v):fmt(v),l-6,Y(v),{a:'right',s:10,c:C.muted});});
+  ctx.strokeStyle=C.line;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(l,H-b);ctx.lineTo(W-r,H-b);ctx.stroke();
+  (o.xt||[]).forEach(v=>T(ctx,o.xf?o.xf(v):v,X(v),H-b+12,{s:10,c:C.muted}));
+  return {X,Y,l,r,t,b};
+}
+function fulcrum(ctx,x,yb,label){ctx.fillStyle=C.acc;ctx.beginPath();ctx.moveTo(x,yb+18);ctx.lineTo(x-8,yb+31);ctx.lineTo(x+8,yb+31);ctx.closePath();ctx.fill();if(label)T(ctx,label,x+12,yb+26,{s:11,a:'left',c:C.acc,w:600});}
+function drawBars(ctx,W,H,o){
+  const n=o.xs.length,b=o.mean!=null?44:26;
+  const A=axes(ctx,W,H,{x0:o.xs[0]-.6,x1:o.xs[n-1]+.6,y0:0,y1:o.ymax,yt:o.yt,xt:o.xs,b,t:o.t??16,xf:o.xf,l:o.l});
+  const bw=Math.min(44,(A.X(1)-A.X(0))*.72);
+  o.xs.forEach((x,k)=>{const p=o.ps[k];if(p<=0&&!o.zero)return;const y=A.Y(Math.max(0,p)),h=A.Y(0)-y;const isH=o.hl&&o.hl.includes(k);const isD=o.dim&&o.dim.includes(k);
+    ctx.globalAlpha=isD?.22:1;rr(ctx,A.X(x)-bw/2,y,bw,h,3);ctx.fillStyle=o.col?o.col(k):acc(isH?1:.72);ctx.fill();
+    if(isH){ctx.save();rr(ctx,A.X(x)-bw/2,y,bw,h,3);ctx.clip();hatch(ctx,A.X(x)-bw/2,y,bw,h);ctx.restore();rr(ctx,A.X(x)-bw/2,y,bw,h,3);ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}
+    if(o.vals||isH)T(ctx,o.vf?o.vf(p):fmt(p),A.X(x),y-9,{s:11,w:650,c:isH?'#fff':C.muted});ctx.globalAlpha=1;});
+  if(o.mean!=null){ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle=acc(.8);ctx.beginPath();ctx.moveTo(A.X(o.mean),A.t);ctx.lineTo(A.X(o.mean),H-b);ctx.stroke();ctx.restore();fulcrum(ctx,A.X(o.mean),H-b,o.meanLabel);}
+  return A;
+}
+function areaPath(ctx,A,f,a,b,N=160){ctx.beginPath();ctx.moveTo(A.X(a),A.Y(0));for(let k=0;k<=N;k++){const x=a+(b-a)*k/N;ctx.lineTo(A.X(x),A.Y(f(x)));}ctx.lineTo(A.X(b),A.Y(0));ctx.closePath();}
+function strokeFn(ctx,A,f,a,b,col,w=2.2,dash){ctx.save();if(dash)ctx.setLineDash(dash);ctx.beginPath();for(let k=0;k<=300;k++){const x=a+(b-a)*k/300;const y=A.Y(f(x));k?ctx.lineTo(A.X(x),y):ctx.moveTo(A.X(x),y);}ctx.strokeStyle=col;ctx.lineWidth=w;ctx.stroke();ctx.restore();}
+function drawCurve(ctx,W,H,o){
+  const b=o.mean!=null?44:26;const A=axes(ctx,W,H,{x0:o.x0,x1:o.x1,y0:0,y1:o.ymax,yt:o.yt,xt:o.xt,b,t:o.t??16,xf:o.xf});
+  if(o.fill){areaPath(ctx,A,o.f,o.x0,o.x1);ctx.fillStyle=acc(.12);ctx.fill();}
+  if(o.shade){areaPath(ctx,A,o.f,o.shade[0],o.shade[1]);ctx.fillStyle=acc(.62);ctx.fill();}
+  if(o.hl){areaPath(ctx,A,o.f,o.hl[0],o.hl[1]);ctx.fillStyle=acc(.95);ctx.fill();ctx.save();ctx.clip();hatch(ctx,0,0,W,H);ctx.restore();}
+  strokeFn(ctx,A,o.f,o.x0,o.x1,'#e3e7ef');
+  if(o.mean!=null)fulcrum(ctx,A.X(o.mean),H-b,o.meanLabel);
+  return A;
+}
+function measureW(ctx,s,size){ctx.save();ctx.font=`600 ${size}px ${FONT}`;const w=ctx.measureText(s).width;ctx.restore();return w;}
+function drawTree(ctx,W,H,root,o={}){
+  const depth=n=>n.kids&&n.kids.length?1+Math.max(...n.kids.map(depth)):0, leaves=n=>n.kids&&n.kids.length?n.kids.reduce((s,k)=>s+leaves(k),0):1;
+  const D=depth(root),L=leaves(root),leafW=o.leafW??62,padY=o.padY??14,fs=o.fs??13;
+  const colX=k=>24+k*((W-48-leafW)/D);let li=0;const all=[];
+  (function place(n,d,p){n._x=colX(d);n._p=p;n._w=n.l?measureW(ctx,n.l,fs)+16:10;if(n.kids&&n.kids.length){n.kids.forEach((k,i)=>place(k,d+1,p+i));n._y=n.kids.reduce((s,k)=>s+k._y,0)/n.kids.length;}else{n._y=padY+(li+.5)*(H-2*padY)/L;li++;}all.push(n);})(root,0,'');
+  const isH=p=>(o.hl||[]).some(h=>h.startsWith(p));
+  all.forEach(n=>(n.kids||[]).forEach(k=>{const h=isH(k._p);const x1=n._x+n._w/2,x2=k._x-k._w/2;ctx.beginPath();ctx.moveTo(x1,n._y);ctx.lineTo(x2,k._y);ctx.strokeStyle=h?C.acc:'rgba(232,234,240,.35)';ctx.lineWidth=h?3:1.5;ctx.stroke();
+    if(k.p!=null){const mx=(x1+x2)/2,my=(n._y+k._y)/2;const up=k._y<n._y?-1:1;T(ctx,k.p,mx,my+up*11-(up<0?0:0),{s:fs-1,w:h?750:600,c:h?C.acc:C.muted});}}));
+  all.forEach(n=>{if(!n.l){ctx.beginPath();ctx.arc(n._x,n._y,4,0,TAU);ctx.fillStyle=C.muted;ctx.fill();return;}const h=n._p&&isH(n._p);rr(ctx,n._x-n._w/2,n._y-12,n._w,24,8);ctx.fillStyle=h?acc(.95):(n.tone==='b'?slate(.35):n.tone==='a'?acc(.3):'#222833');ctx.fill();
+    T(ctx,n.l,n._x,n._y+.5,{s:fs,w:650,c:h?C.ink:C.text});if(n.leaf!=null)T(ctx,n.leaf,n._x+n._w/2+8,n._y+.5,{s:fs-1,w:h?750:550,a:'left',c:h?C.acc:C.muted});});
+}
+function drawTiles(ctx,W,H,items,o={}){
+  const n=items.length,cols=o.cols||Math.min(n,4),rows=Math.ceil(n/cols),gap=8;const tw=(W-24-(cols-1)*gap)/cols,th=Math.min(o.th||56,(H-24-(rows-1)*gap)/rows);const oy=(H-(rows*th+(rows-1)*gap))/2;
+  items.forEach((s,k)=>{const x=12+(k%cols)*(tw+gap),y=oy+Math.floor(k/cols)*(th+gap);const a=o.A&&o.A(k),b=o.B&&o.B(k),f=o.fade&&o.fade(k);
+    ctx.globalAlpha=f?.15:1;rr(ctx,x,y,tw,th,10);ctx.fillStyle=a?acc(.85):b?slate(.4):C.grid;ctx.fill();if(a&&b){ctx.lineWidth=3;ctx.strokeStyle=C.b;ctx.stroke();}
+    if(o.hl&&o.hl(k)){ctx.save();rr(ctx,x,y,tw,th,10);ctx.clip();hatch(ctx,x,y,tw,th);ctx.restore();rr(ctx,x,y,tw,th,10);ctx.lineWidth=2.5;ctx.strokeStyle='#fff';ctx.stroke();}
+    T(ctx,s,x+tw/2,y+th/2+.5,{s:o.fs||15,w:700,c:a?C.ink:C.text});ctx.globalAlpha=1;});
+}
+function person(ctx,cx,cy,s){ctx.beginPath();ctx.arc(cx,cy-s*.2,s*.15,0,TAU);ctx.fill();ctx.beginPath();ctx.arc(cx,cy+s*.33,s*.28,Math.PI,0);ctx.closePath();ctx.fill();}
+function drawIcons(ctx,box,o){
+  const cols=o.cols||10,rows=Math.ceil(o.n/cols);const s=Math.min(box.w/cols,box.h/rows);const ox=box.x+(box.w-s*cols)/2,oy=box.y+(box.h-s*rows)/2;
+  for(let i=0;i<o.n;i++){const cx=ox+(i%cols+.5)*s,cy=oy+(Math.floor(i/cols)+.5)*s;const st=o.style(i);ctx.globalAlpha=st.a;ctx.fillStyle=st.c;person(ctx,cx,cy,s);
+    if(st.ring){ctx.globalAlpha=1;rr(ctx,cx-s*.46,cy-s*.46,s*.92,s*.92,5);ctx.strokeStyle='#fff';ctx.lineWidth=1.6;ctx.stroke();}}
+  ctx.globalAlpha=1;
+}
+function bayesStyle(o){return i=>{const g=i<o.tp?'S+':i<o.s?'S-':i<o.s+o.fp?'H+':'H-';const st=o.step??4;
+  if(st===1)return{c:C.dim,a:1};
+  if(st===2)return g[0]==='S'?{c:C.acc,a:1}:{c:C.b,a:.38};
+  if(st===3)return g==='S+'?{c:C.acc,a:1}:g==='S-'?{c:C.acc,a:.22}:{c:C.b,a:.38};
+  if(st===4)return{c:g[0]==='S'?C.acc:C.b,a:g[1]==='+'?1:.16};
+  return g[1]==='+'?{c:g[0]==='S'?C.acc:C.b,a:1,ring:o.ring&&g==='S+'}:{c:C.dim,a:.07};};}
+const BAYES_LEG=[[C.acc,'Has it'],[C.b,'Does not'],['#e8eaf0','Solid = tested positive']];
+function drawUrn(ctx,cx,cy,w,h,balls,o={}){
+  ctx.beginPath();ctx.moveTo(cx-w/2,cy-h/2);ctx.lineTo(cx-w/2,cy+h/2-18);ctx.quadraticCurveTo(cx-w/2,cy+h/2,cx-w/2+18,cy+h/2);ctx.lineTo(cx+w/2-18,cy+h/2);ctx.quadraticCurveTo(cx+w/2,cy+h/2,cx+w/2,cy+h/2-18);ctx.lineTo(cx+w/2,cy-h/2);
+  ctx.strokeStyle='rgba(232,234,240,.6)';ctx.lineWidth=2;ctx.stroke();
+  const r=Math.min(14,w/9),per=Math.max(1,Math.floor((w-10)/(2*r+6)));
+  balls.forEach((b,k)=>{const row=Math.floor(k/per),col=k%per;const inRow=Math.min(per,balls.length-row*per);const bx=cx+(col-(inRow-1)/2)*(2*r+6),by=cy+h/2-r-8-row*(2*r+6);
+    ctx.beginPath();ctx.arc(bx,by,r,0,TAU);ctx.fillStyle=b==='r'?C.acc:C.b;ctx.fill();if(o.ring){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}});
+  if(o.label)T(ctx,o.label,cx,cy-h/2-12,{s:12,w:650,c:C.muted});
+}
+function dieFace(ctx,x,y,s,v){rr(ctx,x,y,s,s,s*.18);ctx.fillStyle='#e8eaf0';ctx.fill();const P={1:[[.5,.5]],2:[[.27,.27],[.73,.73]],3:[[.27,.27],[.5,.5],[.73,.73]],4:[[.27,.27],[.73,.27],[.27,.73],[.73,.73]],5:[[.27,.27],[.73,.27],[.5,.5],[.27,.73],[.73,.73]],6:[[.27,.25],[.73,.25],[.27,.5],[.73,.5],[.27,.75],[.73,.75]]};
+  ctx.fillStyle=C.bg;P[v].forEach(([a,b])=>{ctx.beginPath();ctx.arc(x+a*s,y+b*s,s*.085,0,TAU);ctx.fill();});}
+function coinFace(ctx,cx,cy,r,v){ctx.beginPath();ctx.arc(cx,cy,r,0,TAU);ctx.fillStyle=v==='H'?C.acc:C.b;ctx.fill();T(ctx,v,cx,cy+1,{s:r*.9,w:800,c:C.ink});}
+function combos(n,k){const res=[];(function rec(st,cur){if(cur.length===k){res.push(cur.slice());return;}for(let i=st;i<n;i++){cur.push(i);rec(i+1,cur);cur.pop();}})(0,[]);return res;}
+function perms(a){if(a.length<=1)return[a.slice()];const out=[];a.forEach((x,i)=>perms(a.filter((_,j)=>j!==i)).forEach(p=>out.push([x,...p])));return out;}
+const LET='ABCDE';
+function drawArr(ctx,W,H,o){
+  const groups=combos(o.n,o.k).map(c=>perms(c)),R=groups.length,per=groups[0].length;
+  const rowH=Math.min(30,(H-12)/R);let r=Math.min((rowH-8)/2,11);const itemW=()=>o.k*(2*r+3)+12;while(per*itemW()>W-70&&r>4)r-=.5;
+  const tw=per*itemW(),x0=(W-tw-40)/2,y0=(H-R*rowH)/2;
+  groups.forEach((g,gi)=>{const y=y0+gi*rowH;if(o.grouped){rr(ctx,x0-6,y+2,tw+6,rowH-4,8);ctx.fillStyle=(o.hl?acc(.16):'#1d222c');ctx.fill();ctx.strokeStyle=o.hl?acc(.6):C.line;ctx.lineWidth=1;ctx.stroke();}
+    g.forEach((p,pi)=>{const ix=x0+pi*itemW();const rep=o.grouped&&pi===0;p.forEach((t,ti)=>{const cx=ix+r+ti*(2*r+3),cy=y+rowH/2;ctx.beginPath();ctx.arc(cx,cy,r,0,TAU);ctx.fillStyle=rep?C.acc:'#2e3542';ctx.globalAlpha=o.grouped&&!rep?.55:1;ctx.fill();T(ctx,LET[t],cx,cy+.5,{s:r*1.1,w:700,c:rep?C.ink:C.text});ctx.globalAlpha=1;});});
+    if(o.grouped)T(ctx,o.hl?(gi+1):'1 set',x0+tw+22,y+rowH/2,{s:11,w:650,c:o.hl?C.acc:C.muted});});
+}
+function drawPascal(ctx,W,H,o={}){const rows=6,rh=(H-16)/rows,cw=Math.min(46,(W-20)/6.5);
+  for(let n=0;n<rows;n++){let c=1;for(let k=0;k<=n;k++){const x=W/2+(k-n/2)*cw,y=10+(n+.5)*rh;const h=o.hl&&n===5&&k===2;rr(ctx,x-cw*.42,y-rh*.38,cw*.84,rh*.76,7);ctx.fillStyle=h?acc(.95):n===5?acc(.18):C.grid;ctx.fill();
+    T(ctx,c,x,y+.5,{s:13,w:650,c:h?C.ink:n===5?C.text:C.muted});if(o.hl&&n===5)T(ctx,'k='+k,x,y+rh*.38+9,{s:9,c:C.acc});c=c*(n-k)/(k+1);}}
+  T(ctx,'row 5',W/2-3.2*cw-4,10+5.5*rh,{s:11,a:'right',c:C.muted});}
+
+/* ============ widgets (explore + labs) ============ */
+const MODES={
+  coin:{name:'Coin',labs:['H','T'],p:[.5,.5],roll(){const v=Math.random()<.5?'H':'T';return{k:v==='H'?0:1,faces:[['c',v]]};}},
+  die:{name:'One die',labs:['1','2','3','4','5','6'],p:Array(6).fill(1/6),roll(){const d=1+Math.floor(Math.random()*6);return{k:d-1,faces:[['d',d]]};}},
+  sum2:{name:'Sum of two dice',labs:['2','3','4','5','6','7','8','9','10','11','12'],p:[1,2,3,4,5,6,5,4,3,2,1].map(x=>x/36),roll(){const a=1+Math.floor(Math.random()*6),b=1+Math.floor(Math.random()*6);return{k:a+b-2,faces:[['d',a],['d',b]]};}},
+  coins2:{name:'Two coins',labs:['HH','HT','TH','TT'],p:[.25,.25,.25,.25],roll(){const a=Math.random()<.5?'H':'T',b=Math.random()<.5?'H':'T';return{k:(a==='H'?0:2)+(b==='H'?0:1),faces:[['c',a],['c',b]]};}}
+};
+function rollerWidget(host,{mode='sum2',modes=null}){
+  let M=MODES[mode],counts=Array(M.labs.length).fill(0),total=0,last=null,theory=true,auto=false;
+  if(modes)chips(host,modes.map(m=>MODES[m].name),modes.indexOf(mode),k=>{M=MODES[modes[k]];reset();});
+  const v=mkCanvas(host,260,(ctx,W,H)=>{
+    if(last){const fs=last.faces;const s=44;const tw=fs.length*s+(fs.length-1)*12;fs.forEach(([t,val],i)=>{const x=W/2-tw/2+i*(s+12);if(t==='d')dieFace(ctx,x,8,s,val);else coinFace(ctx,x+s/2,30,s/2-1,val);});}
+    else T(ctx,'Tap Roll',W/2,30,{s:13,c:C.muted});
+    const ps=counts.map(c=>total?c/total:0);const ymax=Math.max(Math.max(...M.p)*1.6,Math.max(...ps)*1.1);
+    const n=M.labs.length;const A=axes(ctx,W,H,{x0:-.6,x1:n-.4,y0:0,y1:ymax,t:68,yt:[0,ymax/2,ymax].map(x=>+x.toFixed(2)),xt:M.labs.map((_,i)=>i),xf:i=>M.labs[i]});
+    const bw=Math.min(40,(A.X(1)-A.X(0))*.72);
+    ps.forEach((p,i)=>{const y=A.Y(p);rr(ctx,A.X(i)-bw/2,y,bw,A.Y(0)-y,3);ctx.fillStyle=(last&&i===last.k)?C.acc:acc(.6);ctx.fill();});
+    if(theory){ctx.save();ctx.setLineDash([4,3]);ctx.strokeStyle='#fff';ctx.lineWidth=1.4;M.p.forEach((p,i)=>{ctx.beginPath();ctx.moveTo(A.X(i)-bw/2-2,A.Y(p));ctx.lineTo(A.X(i)+bw/2+2,A.Y(p));ctx.stroke();});ctx.restore();}
+    T(ctx,`${total} roll${total===1?'':'s'}`,W-14,62,{a:'right',s:12,c:C.muted});
+  });
+  function roll(n){for(let i=0;i<n;i++){last=M.roll();counts[last.k]++;total++;}v.redraw();}
+  function reset(){counts=Array(M.labs.length).fill(0);total=0;last=null;v.redraw();}
+  const c=el('div','ctrls');host.appendChild(c);
+  ctrlBtn(c,'Roll',()=>roll(1),true);ctrlBtn(c,'×10',()=>roll(10));ctrlBtn(c,'×100',()=>roll(100));
+  const ab=ctrlBtn(c,'Auto',()=>{auto=!auto;ab.textContent=auto?'Stop':'Auto';if(auto)loop();});ctrlBtn(c,'Reset',reset);
+  let raf;function loop(){if(!auto)return;roll(1);raf=setTimeout(loop,70);}live.push(()=>{auto=false;clearTimeout(raf);});
+  const tc=chips(host,['Show expected heights'],0,()=>{theory=!theory;tc.set(theory?0:-1);v.redraw();});
+  return v;
+}
+function gridExplorer(h){
+  const evs=[['Sum is 7',(i,j)=>i+j===7],['Doubles',(i,j)=>i===j],['First die even',i=>i%2===0],['Sum ≥ 10',(i,j)=>i+j>=10],['Tap your own',null]];
+  let cur=0;const custom=new Set();const cap=el('div','cap');let ch;
+  const v=mkCanvas(h,w=>Math.min(w*.9,330),(ctx,W,H)=>{const f=evs[cur][1]||((i,j)=>custom.has(i+','+j));drawDice(ctx,W,H,{A:f,sums:true});
+    let n=0;for(let i=1;i<=6;i++)for(let j=1;j<=6;j++)if(f(i,j))n++;cap.innerHTML=`<b>${n}</b> of 36 squares shaded. Each square counts the same.`;},
+    {onTap:(x,y,W,H)=>{const c=diceHit(W,H,x,y);if(!c)return;if(cur!==4){custom.clear();for(let i=1;i<=6;i++)for(let j=1;j<=6;j++)if(evs[cur][1](i,j))custom.add(i+','+j);cur=4;ch.set(4);}
+      const k=c.join(',');custom.has(k)?custom.delete(k):custom.add(k);v.redraw();}});
+  h.appendChild(cap);ch=chips(h,evs.map(e=>e[0]),0,k=>{cur=k;v.redraw();});
+}
+function vennExplorer(h){
+  const evs=[['A',['A','AB']],['B',['B','AB']],['A or B',['A','B','AB']],['A and B',['AB']],['not A',['B','N']],['A but not B',['A']]];
+  const nm=['A','B','A ∪ B','A ∩ B','Aᶜ','A ∩ Bᶜ'];let cur=2;const cap=el('div','cap');
+  const v=mkCanvas(h,220,(ctx,W,H)=>{drawVenn(ctx,W,H,{shade:evs[cur][1]});cap.innerHTML=`Shaded: <b>${evs[cur][0]}</b>, written ${nm[cur]}`;});
+  h.appendChild(cap);chips(h,evs.map(e=>e[0]),cur,k=>{cur=k;v.redraw();});
+}
+function arrExplorer(h){
+  let n=4,k=2,grouped=false;const cap=el('div','cap');
+  const v=mkCanvas(h,270,(ctx,W,H)=>{drawArr(ctx,W,H,{n,k,grouped});const G=combos(n,k).length,per=perms([...Array(k).keys()]).length;
+    cap.innerHTML=grouped?`<b>${G*per}</b> lists collapse into <b>${G}</b> sets. Each set has ${per} orderings.`:`<b>${G*per}</b> ordered lists of ${k} from ${n} letters`;});
+  h.appendChild(cap);
+  chips(h,['Order matters','Order doesn’t matter'],0,x=>{grouped=x===1;v.redraw();});
+  let ks;slider(h,'Letters to pick from (n)',3,5,1,n,x=>{n=x;if(k>n){k=n;ks.value=k;}v.redraw();});
+  ks=slider(h,'How many you pick (k)',1,3,1,k,x=>{k=x;v.redraw();});
+}
+function condExplorer(h){
+  const Bs=[['First die is 6',i=>i===6],['First die ≥ 4',i=>i>=4],['Doubles',(i,j)=>i===j]];let b=0,zoom=false;const A=(i,j)=>i+j>=9;const cap=el('div','cap');
+  const v=mkCanvas(h,w=>Math.min(w*.9,320),(ctx,W,H)=>{const B=Bs[b][1];drawDice(ctx,W,H,{A,B,fade:zoom?((i,j)=>!B(i,j)):null,sums:true});
+    let nb=0,nab=0,na=0;for(let i=1;i<=6;i++)for(let j=1;j<=6;j++){if(B(i,j)){nb++;if(A(i,j))nab++;}if(A(i,j))na++;}
+    cap.innerHTML=zoom?`Inside B: <b>${nab} of ${nb}</b> squares are also A`:`A (sum ≥ 9, teal) fills <b>${na} of 36</b>. B is outlined in slate.`;});
+  h.appendChild(cap);legend(h,[[C.acc,'A: sum ≥ 9'],[C.b,'B: the condition']]);
+  chips(h,Bs.map(x=>'B: '+x[0]),0,k=>{b=k;v.redraw();});
+  const zc=chips(h,['Zoom into B'],-1,()=>{zoom=!zoom;zc.set(zoom?0:-1);v.redraw();});
+}
+function indepExplorer(h){
+  let pA=.4,pB=.5,dep=false;const cap=el('div','cap');
+  const v=mkCanvas(h,w=>Math.min(w,320),(ctx,W,H)=>{const hA=dep?Math.min(.95,pB+.3):pB;let hC=(pB-pA*hA)/(1-pA);hC=Math.max(.02,Math.min(.98,hC));
+    drawMosaic(ctx,W,H,{cols:[{w:+pA.toFixed(2),h:+hA.toFixed(2),label:'A'},{w:+(1-pA).toFixed(2),h:+hC.toFixed(2),label:'not A'}],dash:true,yLabel:'B'});
+    cap.innerHTML=Math.abs(hA-hC)<.005?`Teal (B) reaches the <b>same height</b> in both strips. Knowing A tells you nothing about B.`:`Teal (B) is <b>${fmt(hA)}</b> tall inside A but <b>${fmt(hC)}</b> outside. Knowing A changes your bet on B.`;});
+  h.appendChild(cap);chips(h,['Independent','Dependent'],0,k=>{dep=k===1;v.redraw();});
+  slider(h,'Width of A',.1,.9,.05,pA,x=>{pA=x;v.redraw();},x=>x.toFixed(2));
+  slider(h,'Overall share of B',.1,.9,.05,pB,x=>{pB=x;v.redraw();},x=>x.toFixed(2));
+}
+function totalExplorer(h){
+  const w=[.5,.3,.2];let r=[.2,.5,.1];const cap=el('div','cap');
+  const v1=mkCanvas(h,w0=>Math.min(w0,300),(ctx,W,H)=>{drawMosaic(ctx,W,H,{cols:w.map((x,i)=>({w:x,h:r[i],label:'B'+'₁₂₃'[i]})),yLabel:'A'});const t=w.reduce((s,x,i)=>s+x*r[i],0);
+    cap.innerHTML=`Total teal area: ${w.map((x,i)=>`${fmt(x)}×${fmt(r[i])}`).join(' + ')} = <b>${fmt(t,3)}</b>`;});
+  h.appendChild(cap);
+  const v2=mkCanvas(h,200,(ctx,W,H)=>drawTree(ctx,W,H,{kids:w.map((x,i)=>({l:'B'+'₁₂₃'[i],p:fmt(x),kids:[{l:'A',p:fmt(r[i]),leaf:fmt(x*r[i],3),tone:'a'},{l:'Aᶜ',p:fmt(1-r[i])}]}))},{padY:10,fs:12,hl:['00','10','20']}));
+  [0,1,2].forEach(i=>slider(h,`How much of B${'₁₂₃'[i]} is A`,0,1,.05,r[i],x=>{r[i]=x;v1.redraw();v2.redraw();},x=>x.toFixed(2)));
+}
+const BSTEPS=['100 people. Nobody has been tested yet.','10 of them have the condition (teal). That is the 10% base rate.','The test catches 9 of those 10. They stay solid. One sick person slips through.','The test also flags 9 of the 90 healthy people by mistake (solid slate).','Look only at the solid figures, everyone who tested positive: 9 sick out of 18. A positive result here means 50%, nowhere near 90%.'];
+function bayesStepper(h){
+  let st=1;const cap=el('div','cap');
+  const v=mkCanvas(h,w=>Math.min(w*.9,330),(ctx,W,H)=>{drawIcons(ctx,{x:8,y:8,w:W-16,h:H-16},{n:100,style:bayesStyle({s:10,tp:9,fp:9,step:st,ring:st===5})});cap.innerHTML=`<b>Step ${st} of 5.</b> ${BSTEPS[st-1]}`;});
+  h.appendChild(cap);legend(h,BAYES_LEG);const c=el('div','ctrls');h.appendChild(c);
+  ctrlBtn(c,'Back',()=>{st=Math.max(1,st-1);v.redraw();});ctrlBtn(c,'Next step',()=>{st=Math.min(5,st+1);v.redraw();},true);
+}
+function bayesSliders(h){
+  let s=10,sens=.9,fpr=.1;const cap=el('div','cap');const calc=()=>{const tp=Math.round(s*sens),fp=Math.round((100-s)*fpr);return{tp,fp};};
+  const v=mkCanvas(h,w=>Math.min(w*.9,320),(ctx,W,H)=>{const{tp,fp}=calc();drawIcons(ctx,{x:8,y:8,w:W-16,h:H-16},{n:100,style:bayesStyle({s,tp,fp,step:4})});
+    cap.innerHTML=tp+fp?`<b>${tp}</b> of the <b>${tp+fp}</b> positives actually have it, about <b>${Math.round(100*tp/(tp+fp))}%</b>`:'Nobody tests positive.';});
+  h.appendChild(cap);legend(h,BAYES_LEG);
+  const t=mkCanvas(h,190,(ctx,W,H)=>{const{tp,fp}=calc();drawTree(ctx,W,H,{kids:[{l:'Has it',p:fmt(s/100),tone:'a',kids:[{l:'+',p:fmt(sens),leaf:tp+' people'},{l:'−',p:fmt(1-sens),leaf:(s-tp)+''}]},{l:'Does not',p:fmt(1-s/100),tone:'b',kids:[{l:'+',p:fmt(fpr),leaf:fp+' people'},{l:'−',p:fmt(1-fpr),leaf:(100-s-fp)+''}]}]},{hl:['00','10'],leafW:70,fs:12,padY:10});});
+  slider(h,'Base rate (people out of 100 who have it)',1,40,1,s,x=>{s=x;v.redraw();t.redraw();});
+  slider(h,'Test catches this share of sick people',.5,1,.05,sens,x=>{sens=x;v.redraw();t.redraw();},x=>x.toFixed(2));
+  slider(h,'False alarm rate among healthy people',0,.3,.01,fpr,x=>{fpr=x;v.redraw();t.redraw();},x=>x.toFixed(2));
+}
+const SUMP=[1,2,3,4,5,6,5,4,3,2,1].map(x=>x/36),SUMX=[2,3,4,5,6,7,8,9,10,11,12];
+function pmfExplorer(h){
+  let view=0,x=7;const cap=el('div','cap');
+  const v=mkCanvas(h,240,(ctx,W,H)=>{
+    if(view===0){drawBars(ctx,W,H,{xs:SUMX,ps:SUMP,ymax:.2,yt:[0,.1,.2],hl:SUMX.map((v,i)=>v<=x?i:-1).filter(i=>i>=0),vf:p=>Math.round(p*36)+'/36',mean:7,meanLabel:'balances at 7'});
+      cap.innerHTML=`PMF: bar heights are P(X = x). Bars up to ${x} add to <b>${SUMP.slice(0,x-1).reduce((a,b)=>a+b,0)*36}/36</b>`;}
+    else{const A=axes(ctx,W,H,{x0:1,x1:13,y0:0,y1:1.05,yt:[0,.5,1],xt:SUMX});let c=0;ctx.strokeStyle='#e3e7ef';ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(A.X(1),A.Y(0));
+      SUMX.forEach((v,i)=>{ctx.lineTo(A.X(v),A.Y(c));c+=SUMP[i];ctx.lineTo(A.X(v),A.Y(c));});ctx.lineTo(A.X(13),A.Y(1));ctx.stroke();
+      const F=SUMP.slice(0,x-1).reduce((a,b)=>a+b,0);ctx.save();ctx.setLineDash([4,3]);ctx.strokeStyle=C.acc;ctx.beginPath();ctx.moveTo(A.X(x),A.Y(0));ctx.lineTo(A.X(x),A.Y(F));ctx.lineTo(A.l,A.Y(F));ctx.stroke();ctx.restore();
+      ctx.beginPath();ctx.arc(A.X(x),A.Y(F),5,0,TAU);ctx.fillStyle=C.acc;ctx.fill();T(ctx,`${Math.round(F*36)}/36`,A.X(x)-8,A.Y(F)-12,{a:'right',s:12,w:700,c:C.acc});
+      cap.innerHTML=`CDF: the height at x is everything up to x, P(X ≤ ${x}) = <b>${Math.round(F*36)}/36</b>. Each jump is one bar.`;}
+  });
+  h.appendChild(cap);chips(h,['PMF bars','CDF staircase'],0,k=>{view=k;v.redraw();});
+  slider(h,'x',2,12,1,x,q=>{x=q;v.redraw();});
+}
+const SHAPES={
+  Bell:{x0:-4,x1:4,f:x=>Math.exp(-x*x/2)/Math.sqrt(TAU),ymax:.45},
+  Exponential:{x0:0,x1:5,f:x=>x<0?0:Math.exp(-x),ymax:1.05},
+  Uniform:{x0:-.5,x1:4.5,f:x=>(x>=0&&x<=4)?.25:0,ymax:.4}
+};
+function cdfOf(sh){const N=600,xs=[],cs=[];let c=0,prev=sh.f(sh.x0);for(let k=0;k<=N;k++){const x=sh.x0+(sh.x1-sh.x0)*k/N;const y=sh.f(x);if(k)c+=(y+prev)/2*(sh.x1-sh.x0)/N;prev=y;xs.push(x);cs.push(c);}return x=>{if(x<=sh.x0)return 0;if(x>=sh.x1)return cs[N];const k=Math.round((x-sh.x0)/(sh.x1-sh.x0)*N);return cs[k];};}
+function pdfExplorer(h){
+  let name='Bell',a=-1,b=1;const cap=el('div','cap');let sh=SHAPES[name],F=cdfOf(sh);
+  const v1=mkCanvas(h,190,(ctx,W,H)=>{const lo=Math.min(a,b),hi=Math.max(a,b);drawCurve(ctx,W,H,{f:sh.f,x0:sh.x0,x1:sh.x1,ymax:sh.ymax,shade:[lo,hi],fill:true,xt:ticks(sh),yt:[0]});
+    cap.innerHTML=`Shaded area under the PDF = P(${fmt(lo)} ≤ X ≤ ${fmt(hi)}) = <b>${fmt(F(hi)-F(lo),3)}</b>`;});
+  h.appendChild(cap);
+  const v2=mkCanvas(h,170,(ctx,W,H)=>{const lo=Math.min(a,b),hi=Math.max(a,b);const A=axes(ctx,W,H,{x0:sh.x0,x1:sh.x1,y0:0,y1:1.05,yt:[0,.5,1],xt:ticks(sh)});strokeFn(ctx,A,F,sh.x0,sh.x1,'#e3e7ef');
+    [lo,hi].forEach(x=>{ctx.beginPath();ctx.arc(A.X(x),A.Y(F(x)),4.5,0,TAU);ctx.fillStyle=C.acc;ctx.fill();});
+    ctx.strokeStyle=C.acc;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(A.X(hi)+10,A.Y(F(lo)));ctx.lineTo(A.X(hi)+10,A.Y(F(hi)));ctx.stroke();T(ctx,'jump = area',A.X(hi)+16,(A.Y(F(lo))+A.Y(F(hi)))/2,{a:'left',s:11,c:C.acc,w:650});
+    T(ctx,'CDF F(x)',A.l+6,A.t+4,{a:'left',s:11,c:C.muted});});
+  chips(h,Object.keys(SHAPES),0,k=>{name=Object.keys(SHAPES)[k];sh=SHAPES[name];F=cdfOf(sh);a=sh.x0+(sh.x1-sh.x0)*.35;b=sh.x0+(sh.x1-sh.x0)*.6;sa.min=sb.min=sh.x0;sa.max=sb.max=sh.x1;sa.value=a;sb.value=b;sa.dispatchEvent(new Event('input'));sb.dispatchEvent(new Event('input'));});
+  const sa=slider(h,'a (left edge)',-4,4,.05,a,x=>{a=x;v1.redraw();v2.redraw();},x=>x.toFixed(2));
+  const sb=slider(h,'b (right edge)',-4,4,.05,b,x=>{b=x;v1.redraw();v2.redraw();},x=>x.toFixed(2));
+}
+function ticks(sh){const out=[];for(let x=Math.ceil(sh.x0);x<=sh.x1;x++)out.push(x);return out;}
+/* CLT sampler */
+const SRC={
+  Flat:{x0:0,x1:1,f:()=>1,ymax:1.6,s:()=>Math.random(),mu:.5,sd:Math.sqrt(1/12),xt:[0,.5,1]},
+  Skewed:{x0:0,x1:4,f:x=>Math.exp(-x),ymax:1.1,s:()=>-Math.log(1-Math.random()),mu:1,sd:1,xt:[0,1,2,3,4]},
+  Die:{x0:.5,x1:6.5,disc:[1,2,3,4,5,6],ymax:.3,s:()=>1+Math.floor(Math.random()*6),mu:3.5,sd:Math.sqrt(35/12),xt:[1,2,3,4,5,6]}
+};
+function cltWidget(h){
+  let name='Skewed',n=5,means=[],lastS=[],bell=true,auto=false,src=SRC[name];const BINS=48;
+  const v1=mkCanvas(h,130,(ctx,W,H)=>{let A;
+    if(src.disc){A=axes(ctx,W,H,{x0:src.x0,x1:src.x1,y0:0,y1:src.ymax,xt:src.xt,t:22});src.disc.forEach(x=>{const y=A.Y(1/6);rr(ctx,A.X(x)-10,y,20,A.Y(0)-y,3);ctx.fillStyle=slate(.55);ctx.fill();});}
+    else{A=axes(ctx,W,H,{x0:src.x0,x1:src.x1,y0:0,y1:src.ymax,xt:src.xt,t:22});areaPath(ctx,A,src.f,src.x0,src.x1);ctx.fillStyle=slate(.35);ctx.fill();strokeFn(ctx,A,src.f,src.x0,src.x1,C.b,1.8);}
+    lastS.forEach((x,i)=>{ctx.beginPath();ctx.arc(A.X(Math.min(src.x1,x)),A.Y(0)-5-(i%3)*6,3.2,0,TAU);ctx.fillStyle='#fff';ctx.fill();});
+    if(lastS.length){const m=lastS.reduce((a,b)=>a+b,0)/lastS.length;ctx.fillStyle=C.acc;ctx.beginPath();ctx.moveTo(A.X(m),A.Y(0)+2);ctx.lineTo(A.X(m)-6,A.Y(0)+12);ctx.lineTo(A.X(m)+6,A.Y(0)+12);ctx.fill();}
+    T(ctx,'Population shape. White dots: your latest sample of '+n,A.l,10,{a:'left',s:11,c:C.muted});});
+  const v2=mkCanvas(h,220,(ctx,W,H)=>{const bw=(src.x1-src.x0)/BINS;const cnt=Array(BINS).fill(0);means.forEach(m=>{const k=Math.min(BINS-1,Math.max(0,Math.floor((m-src.x0)/bw)));cnt[k]++;});
+    const dens=cnt.map(c=>means.length?c/(means.length*bw):0);const se=src.sd/Math.sqrt(n);const peak=1/(se*Math.sqrt(TAU));const ymax=Math.max(peak*1.15,Math.max(...dens)*1.1,.5);
+    const A=axes(ctx,W,H,{x0:src.x0,x1:src.x1,y0:0,y1:ymax,xt:src.xt,t:22});
+    dens.forEach((d,k)=>{if(!d)return;const x=A.X(src.x0+k*bw),w=A.X(src.x0+(k+1)*bw)-x;const y=A.Y(d);ctx.fillStyle=acc(.75);ctx.fillRect(x+.5,y,w-1,A.Y(0)-y);});
+    if(bell)strokeFn(ctx,A,x=>Math.exp(-(((x-src.mu)/se)**2)/2)/(se*Math.sqrt(TAU)),src.x0,src.x1,'#fff',1.8,[5,4]);
+    T(ctx,`Pile of sample means (${means.length})`,A.l,10,{a:'left',s:11,c:C.muted});});
+  function draw(k){for(let i=0;i<k;i++){lastS=[];for(let j=0;j<n;j++)lastS.push(src.s());means.push(lastS.reduce((a,b)=>a+b,0)/n);}v1.redraw();v2.redraw();}
+  function reset(){means=[];lastS=[];v1.redraw();v2.redraw();}
+  chips(h,Object.keys(SRC),1,k=>{name=Object.keys(SRC)[k];src=SRC[name];reset();});
+  slider(h,'Sample size n',1,40,1,n,x=>{n=x;reset();});
+  const c=el('div','ctrls');h.appendChild(c);ctrlBtn(c,'Draw 1 sample',()=>draw(1),true);ctrlBtn(c,'+100',()=>draw(100));
+  const ab=ctrlBtn(c,'Auto',()=>{auto=!auto;ab.textContent=auto?'Stop':'Auto';if(auto)loop();});ctrlBtn(c,'Reset',reset);
+  let to;function loop(){if(!auto)return;draw(3);to=setTimeout(loop,60);}live.push(()=>{auto=false;clearTimeout(to);});
+  const bc=chips(h,['Bell curve overlay'],0,()=>{bell=!bell;bc.set(bell?0:-1);v2.redraw();});
+}
+/* shape explorer: mean as balance point, spread */
+const BASE={Symmetric:z=>Math.exp(-z*z/2)/Math.sqrt(TAU),'Right-skewed':z=>{const u=z+2;return u>0?u*Math.exp(-u):0;},'Two humps':z=>.5*(Math.exp(-(((z+1.5)/.6)**2)/2)+Math.exp(-(((z-1.5)/.6)**2)/2))/(.6*Math.sqrt(TAU))};
+function shapeWidget(h){
+  let name='Right-skewed',c=0,s=1;const cap=el('div','cap');
+  const v=mkCanvas(h,240,(ctx,W,H)=>{const g=BASE[name];const f=x=>g((x-c)/s)/s;let m=0,m2=0,tot=0,mode=0,mv=0;const N=1200;for(let k=0;k<=N;k++){const x=-8+16*k/N,y=f(x);tot+=y;m+=x*y;m2+=x*x*y;if(y>mv){mv=y;mode=x;}}m/=tot;const sd=Math.sqrt(m2/tot-m*m);
+    const A=drawCurve(ctx,W,H,{f,x0:-6,x1:6,ymax:.75,xt:[-6,-4,-2,0,2,4,6],yt:[0],fill:true,mean:m,meanLabel:'balance point = mean '+fmt(m,1)});
+    const yb=A.Y(f(m))*.5+A.Y(0)*.5;ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(A.X(m-sd),yb);ctx.lineTo(A.X(m+sd),yb);[m-sd,m+sd].forEach(x=>{ctx.moveTo(A.X(x),yb-6);ctx.lineTo(A.X(x),yb+6);});ctx.stroke();
+    T(ctx,'±1 SD',A.X(m+sd)+6,yb,{a:'left',s:11,c:'#fff'});
+    if(Math.abs(mode-m)>.15){ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle=C.b;ctx.beginPath();ctx.moveTo(A.X(mode),A.Y(mv));ctx.lineTo(A.X(mode),A.Y(0));ctx.stroke();ctx.restore();T(ctx,'peak',A.X(mode),A.Y(mv)-9,{s:11,c:C.b});}
+    cap.innerHTML=`Mean <b>${fmt(m,2)}</b> sits where the shape would balance. SD <b>${fmt(sd,2)}</b>, variance <b>${fmt(sd*sd,2)}</b>.`;});
+  h.appendChild(cap);chips(h,Object.keys(BASE),1,k=>{name=Object.keys(BASE)[k];v.redraw();});
+  slider(h,'Shift',-2.5,2.5,.1,c,x=>{c=x;v.redraw();},x=>x.toFixed(1));
+  slider(h,'Spread (widen / narrow)',.5,2,.05,s,x=>{s=x;v.redraw();},x=>x.toFixed(2));
+}
+
+/* ============ lesson content ============ */
+const ex=(title,body,build)=>({type:'explore',title,body,build});
+const mc=(prompt,draw,options,ans,explain,x={})=>Object.assign({type:'mc',prompt,draw,options,ans,explain},x);
+const formula=(title,lines)=>({type:'formula',title,lines});
+const LESSONS={};
+const GRID_LEG=[[C.acc,'A'],[C.b,'B (the condition)']];
+
+LESSONS.t1l1=[
+  ex('Roll two dice','Every roll lands on exactly one outcome. Roll a few hundred times and see which sums pile up. Seven wins, and the next screen shows why.',h=>rollerWidget(h,{mode:'sum2'})),
+  ex('The sample space is a grid','Columns are the first die, rows are the second. All 36 squares are equally likely. An event is just a set of squares, so its chance is how many squares it covers out of 36. Try the presets, or tap squares.',gridExplorer),
+  ex('Events as regions','Here S is every possible outcome and A, B are events inside it. Tap through the chips and watch which region lights up.',vennExplorer),
+  mc('Each square is one equally likely roll. What is the chance of landing in the shaded region?',(c,W,H,hl)=>drawDice(c,W,H,{A:(i,j)=>i+j===8,sums:hl,hl:hl?(i,j)=>i+j===8:null}),['4/36','5/36','6/36','8/36'],1,'Count the shaded squares: (2,6), (3,5), (4,4), (5,3), (6,2). That is 5 of 36.',{h:w=>Math.min(w*.9,300)}),
+  mc('Which event is shaded?',(c,W,H,hl)=>drawVenn(c,W,H,{shade:['AB'],hl:hl?['AB']:[]}),['A or B  (A ∪ B)','A and B  (A ∩ B)','not A  (Aᶜ)','A but not B'],1,'Only the lens where the circles overlap is shaded. Outcomes there are in A and in B at the same time.',{h:200}),
+  mc('Which event is shaded now?',(c,W,H,hl)=>drawVenn(c,W,H,{shade:['A'],hl:hl?['A']:[],thick:hl?'B':null}),['A ∩ B','A but not B  (A ∩ Bᶜ)','not B  (Bᶜ)','A ∪ B'],1,'The crescent is inside A but the overlap with B is left empty. So: in A, and not in B.',{h:200}),
+  mc('Shaded: at least one die shows a 6. What is the probability?',(c,W,H,hl)=>drawDice(c,W,H,{A:(i,j)=>i===6||j===6,hl:hl?(i,j)=>i===6&&j===6:null,sums:false,label:hl?((i,j)=>(i===6||j===6)?'':null):null}),['12/36','11/36','10/36','6/36'],1,'The 6-column has 6 squares and the 6-row has 6, but they share the corner (6,6). Count it once: 6 + 6 − 1 = 11.',{h:w=>Math.min(w*.9,300)}),
+  mc('A covers 0.3 of the total area. What is the probability of the shaded part?',(c,W,H,hl)=>drawVenn(c,W,H,{shade:['B','N'],hl:hl?['A']:[],vals:{A:'0.3'},disjoint:false}),['0.3','0.6','0.7','1.3'],2,'The whole box S has probability 1. The shaded part is everything except A, so 1 − 0.3 = 0.7.',{h:200}),
+  mc('Numbers are the probability of each piece. What is P(A or B)?',(c,W,H,hl)=>drawVenn(c,W,H,{shade:['A','B','AB'],hl:hl?['AB']:[],vals:{A:'0.3',AB:'0.2',B:'0.2'}}),['0.9','0.7','0.5','0.2'],1,'Add the three pieces once each: 0.3 + 0.2 + 0.2 = 0.7. If you add P(A) = 0.5 and P(B) = 0.4, the lens gets counted twice.',{h:200}),
+  mc('Three coin flips. Shaded: exactly two heads. Probability?',(c,W,H,hl)=>{const it=['HHH','HHT','HTH','HTT','THH','THT','TTH','TTT'];const two=k=>it[k].split('H').length-1===2;drawTiles(c,W,H,it,{A:two,hl:hl?two:null,cols:4});},['1/8','2/8','3/8','4/8'],2,'Eight equally likely tiles, three of them have exactly two H: HHT, HTH, THH.',{h:150}),
+  formula('What you just saw, written down',[
+    {f:'P(E) = (squares in E) / (all squares)',n:'Only when every outcome is equally likely, like the 36-square grid.'},
+    {f:'P(A ∪ B) = P(A) + P(B) − P(A ∩ B)',n:'Subtract the lens so it is not counted twice.'},
+    {f:'P(Aᶜ) = 1 − P(A)',n:'Everything outside A.'}])
+];
+
+LESSONS.t1l2=[
+  ex('Lists versus sets','Each token is a letter. With order mattering, AB and BA are different lists. Flip to “order doesn’t matter” and the rows turn into sets: every ordering of the same letters becomes one choice. Move the sliders and watch the row length stay at k! while the number of rows changes.',arrExplorer),
+  mc('3 shirts, 2 pants. Each path through the tree is one outfit. How many outfits?',(c,W,H,hl)=>{let n=0;drawTree(c,W,H,{kids:[1,2,3].map(s=>({l:'Shirt '+s,kids:[1,2].map(p=>({l:'Pants '+p,leaf:hl?'#'+(++n):''}))}))},{hl:hl?['00','01','10','11','20','21']:[],fs:12,leafW:40});},['5','6','8','9'],1,'Every shirt branches into 2 pants. 3 branches times 2 each gives 6 leaves, so 6 outfits.',{h:230}),
+  mc('You line up 3 of 5 different books on a shelf. Under each slot are the books still available. How many different orders?',(c,W,H,hl)=>{const sw=(W-60)/3;for(let t=0;t<3;t++){const x=30+t*sw,cx=x+sw/2-6;rr(c,x+6,20,sw-24,46,8);c.setLineDash([5,4]);c.strokeStyle=C.muted;c.stroke();c.setLineDash([]);T(c,'slot '+(t+1),cx,43,{s:12,c:C.muted});
+      const k=5-t,bw=10;for(let b=0;b<k;b++){rr(c,cx-(k*(bw+3))/2+b*(bw+3),90,bw,52,2);c.fillStyle=acc(hl?.95:.6);c.fill();}
+      if(hl){T(c,k,cx,170,{s:24,w:800,c:C.acc});if(t<2)T(c,'×',x+sw-3,170,{s:20,c:'#fff'});}}},['15','60','125','10'],1,'The first slot has 5 choices, then 4 remain, then 3. Each choice branches again, so multiply: 5 × 4 × 3 = 60.',{h:200}),
+  mc('Each row holds the same two letters in every order. If order doesn’t matter, how many different pairs are there?',(c,W,H,hl)=>drawArr(c,W,H,{n:4,k:2,grouped:hl,hl}),['12','8','6','4'],2,'12 ordered pairs, but each row is really one pair written two ways. 12 ÷ 2 = 6 rows, 6 pairs.',{h:220}),
+  mc('A 3-person committee from 5 people (A to E). Each card is one set; the 6 orderings inside it are the same committee. How many committees?',(c,W,H,hl)=>drawArr(c,W,H,{n:5,k:3,grouped:true,hl}),['60','15','10','20'],2,'60 ordered lists, grouped 6 to a card because 3 people can be ordered 3 × 2 × 1 = 6 ways. 60 ÷ 6 = 10 cards.',{h:270}),
+  mc('Left grid: pick a president, then a VP, from 5 people. Right grid: pick a 2-person team. Which has more shaded cells?',(c,W,H,hl)=>{const s=Math.min((W-60)/10,(H-40)/5);const g=(ox,f,lbl,mir)=>{for(let i=0;i<5;i++)for(let j=0;j<5;j++){const x=ox+i*s,y=26+j*s;rr(c,x+1.5,y+1.5,s-3,s-3,4);c.fillStyle=f(i,j)?acc(.8):C.grid;c.fill();if(hl&&mir&&f(i,j)&&i<j){c.save();rr(c,x+1.5,y+1.5,s-3,s-3,4);c.clip();hatch(c,x,y,s,s);c.restore();}}T(c,lbl,ox+2.5*s,12,{s:12,w:650,c:C.muted});};
+      g(W/2-s*5-12,(i,j)=>i!==j,'President, VP',true);g(W/2+12,(i,j)=>i>j,'Team of 2',false);},['Left (president + VP)','Right (team)','They match'],0,'Left shades every off-diagonal cell: 20. Right only keeps one triangle: 10. The hatched cells on the left are the mirror images, the same two people with roles swapped.',{h:200}),
+  mc('Draw 2 cards from these 5 (two teal, three slate). Tiles show every possible pair. P(both teal)?',(c,W,H,hl)=>{const cards=['T1','T2','S1','S2','S3'];const pr=combos(5,2);drawTiles(c,W,H,pr.map(p=>cards[p[0]]+' '+cards[p[1]]),{A:k=>pr[k][1]<2,hl:hl?k=>pr[k][1]<2:null,cols:5,fs:13,th:48});},['1/10','2/5','1/4','4/25'],0,'There are 10 possible pairs and only one of them, T1 T2, is both teal. 1 out of 10.',{h:150}),
+  mc('Row 5 of this triangle counts the ways to choose k things from 5, starting at k = 0. Which number is “choose 2 of 5”?',(c,W,H,hl)=>drawPascal(c,W,H,{hl}),['5','10','15','20'],1,'Row 5 reads 1, 5, 10, 10, 5, 1 for k = 0 to 5. The entry at k = 2 is 10, same as the 10 committee-style pairs you could make from 5.',{h:230}),
+  formula('Now the formulas',[
+    {f:'ordered: n × (n−1) × … = n! / (n−k)!',n:'Slots filling up, one fewer choice each time. Permutations.'},
+    {f:'C(n, k) = n! / ( k! (n−k)! )',n:'Divide out the k! orderings inside each set. Combinations, also Pascal’s triangle.'},
+    {f:'P(event) = (favorable sets) / C(n, k)',n:'Counting gives probability when every set is equally likely.'}])
+];
+
+LESSONS.t1l3=[
+  ex('Conditioning shrinks the world','A is “sum ≥ 9” in teal. Pick a condition B, then zoom in. Once you know B happened, squares outside B are gone, and the question becomes: how much of B is teal?',condExplorer),
+  mc('Given the first die shows 5 (slate column), what is P(sum is 8)?',(c,W,H,hl)=>drawDice(c,W,H,{A:(i,j)=>i+j===8,B:i=>i===5,fade:hl?(i=>i!==5):null,sums:true,hl:hl?((i,j)=>i===5&&j===3):null}),['1/36','1/6','5/36','1/5'],1,'Inside the slate column there are 6 squares. Only (5,3) sums to 8. One of 6.',{h:w=>Math.min(w*.9,300),legend:GRID_LEG}),
+  mc('Given the sum is 4 (slate), what is P(doubles)?',(c,W,H,hl)=>drawDice(c,W,H,{A:(i,j)=>i===j,B:(i,j)=>i+j===4,fade:hl?((i,j)=>i+j!==4):null,sums:true,hl:hl?((i,j)=>i===2&&j===2):null}),['1/3','1/6','1/36','1/4'],0,'Only 3 squares sum to 4: (1,3), (2,2), (3,1). One of them is a double.',{h:w=>Math.min(w*.9,300),legend:GRID_LEG}),
+  mc('Columns split the square into B and not B. Teal is A. Within the B strip, what fraction is teal?',(c,W,H,hl)=>drawMosaic(c,W,H,{cols:[{w:.4,h:.25,label:'B',hl},{w:.6,h:.5,label:'not B'}],yLabel:'A'}),['0.1','0.25','0.4','0.5'],1,'Look only at the B strip. Teal climbs a quarter of the way up it. P(A | B) = 0.25. Its area, 0.4 × 0.25 = 0.1, is P(A ∩ B).',{h:w=>Math.min(w,300)}),
+  mc('Pieces show probabilities: A alone 0.4, overlap 0.1, B alone 0.1. Which is bigger?',(c,W,H,hl)=>drawVenn(c,W,H,{shade:['AB'],hl:hl?['AB']:[],thick:hl?'B':null,vals:{A:'0.4',AB:'0.1',B:'0.1'}}),['P(A | B)','P(B | A)','They are equal'],0,'The overlap is 0.1 either way. Inside B (total 0.2) it is half. Inside A (total 0.5) it is a fifth. Small world B makes the overlap look big.',{h:200}),
+  mc('A deck as a grid: 4 suits by 13 ranks. Face cards are slate, kings teal. Given a face card, P(king)?',(c,W,H,hl)=>{const R=['A','2','3','4','5','6','7','8','9','10','J','Q','K'],S=['♠','♥','♦','♣'];const s=Math.min((W-30)/13,(H-24)/4);const x0=(W-13*s+18)/2;
+      R.forEach((r,i)=>T(c,r,x0+(i+.5)*s,10,{s:10,c:C.muted}));S.forEach((u,j)=>{T(c,u,x0-10,22+(j+.5)*s,{s:12,c:C.muted});R.forEach((r,i)=>{const face=i>=10,k=i===12;c.globalAlpha=hl&&!face?.12:1;rr(c,x0+i*s+1.5,22+j*s+1.5,s-3,s-3,4);c.fillStyle=k?acc(.9):face?slate(.45):C.grid;c.fill();c.globalAlpha=1;});});},['1/13','4/52','1/3','1/4'],2,'There are 12 face cards and 4 of them are kings. Inside the slate world, 4 of 12.',{h:150}),
+  mc('Two kids, older listed first. Slate: at least one girl. Given that, what is P(two girls)?',(c,W,H,hl)=>{const it=['BB','BG','GB','GG'];drawTiles(c,W,H,it,{B:k=>k>0,A:k=>k===3,fade:hl?k=>k===0:null,cols:4});},['1/2','1/3','1/4','2/3'],1,'Knowing there is a girl removes only BB. Three equally likely tiles remain and one is GG.',{h:110}),
+  mc('An urn had 3 teal and 2 slate balls. A teal ball was drawn and not put back. P(next draw is teal)?',(c,W,H,hl)=>{drawUrn(c,W*.42,H/2+10,Math.min(170,W*.5),110,['r','r','b','b'],{ring:hl,label:'left in the urn'});c.globalAlpha=.6;c.beginPath();c.arc(W*.82,H/2+30,14,0,TAU);c.fillStyle=C.acc;c.fill();c.globalAlpha=1;T(c,'drawn',W*.82,H/2+58,{s:12,c:C.muted});},['3/5','1/2','2/5','3/4'],1,'After the first draw only 4 balls remain, 2 teal. The condition changed the urn. 2 of 4.',{h:180}),
+  formula('Now the formula',[
+    {f:'P(A | B) = P(A ∩ B) / P(B)',n:'The overlap, measured as a fraction of B. B becomes the whole world.'},
+    {f:'P(A ∩ B) = P(A | B) · P(B)',n:'Same thing rearranged: the area of the teal block inside the B strip.'}])
+];
+
+LESSONS.t1l4=[
+  ex('Same height means independent','A is a vertical strip, teal is B. If B fills the same share of the A strip as it does outside A, knowing A tells you nothing about B. Switch to dependent and see the heights split.',indepExplorer),
+  ex('Two coins don’t talk','Flip two coins at once. If they are independent, all four combos show up equally often. Hit ×100 a few times.',h=>rollerWidget(h,{mode:'coins2'})),
+  mc('Teal is B. Does knowing A change the chance of B?',(c,W,H,hl)=>drawMosaic(c,W,H,{cols:[{w:.4,h:.5,label:'A'},{w:.6,h:.5,label:'not A'}],dash:hl,yLabel:'B'}),['No, they are independent','Yes, they are dependent'],0,'Teal reaches the same height (0.5) in both strips. P(B | A) = P(B).',{h:w=>Math.min(w,290)}),
+  mc('And here?',(c,W,H,hl)=>drawMosaic(c,W,H,{cols:[{w:.5,h:.7,label:'A'},{w:.5,h:.3,label:'not A'}],dash:hl,yLabel:'B'}),['Independent','Dependent'],1,'Teal is 0.7 tall inside A but only 0.3 outside. Learning A happened pushes B up.',{h:w=>Math.min(w,290)}),
+  mc('A and B are independent with P(A) = 0.5 and P(B) = 0.3. What is the area of the corner where both happen?',(c,W,H,hl)=>drawMosaic(c,W,H,{cols:[{w:.5,h:.3,label:'A',hl,note:hl?'0.5 × 0.3':null},{w:.5,h:.3,label:'not A'}],yLabel:'B'}),['0.8','0.15','0.2','0.35'],1,'The corner is a rectangle 0.5 wide and 0.3 tall. Area 0.15.',{h:w=>Math.min(w,290)}),
+  mc('A and B never overlap, and each has positive probability. Are they independent?',(c,W,H,hl)=>drawVenn(c,W,H,{disjoint:true,shade:hl?[]:['A','B'],hl:hl?['B']:[],vals:{A:'0.3',B:'0.4'}}),['Yes','No'],1,'If A happens, B is impossible. P(B | A) = 0, but P(B) = 0.4. Knowing A changed everything, so they are strongly dependent.',{h:190}),
+  mc('A: first die even (teal). B: sum is 7 (slate). Independent?',(c,W,H,hl)=>drawDice(c,W,H,{A:i=>i%2===0,B:(i,j)=>i+j===7,fade:hl?(i=>i%2):null,sums:true,hl:hl?((i,j)=>i%2===0&&i+j===7):null}),['Yes','No'],0,'Inside A there are 18 squares and 3 of them sum to 7: 3/18 = 1/6. Overall, 6/36 = 1/6. Same share.',{h:w=>Math.min(w*.9,300),legend:[[C.acc,'A: first die even'],[C.b,'B: sum is 7']]}),
+  mc('A: first die is 6 (teal). B: sum ≥ 11 (slate). Independent?',(c,W,H,hl)=>drawDice(c,W,H,{A:i=>i===6,B:(i,j)=>i+j>=11,fade:hl?(i=>i!==6):null,sums:true,hl:hl?((i,j)=>i===6&&i+j>=11):null}),['Yes','No'],1,'Inside A, 2 of 6 squares hit B, that is 1/3. Overall only 3 of 36 do, 1/12. Knowing A makes B much more likely.',{h:w=>Math.min(w*.9,300),legend:[[C.acc,'A: first die is 6'],[C.b,'B: sum ≥ 11']]}),
+  mc('Three fair coin flips. P(three heads in a row)?',(c,W,H,hl)=>{const mk=(d,p)=>d===0?null:['H','T'].map(s=>({l:s,p:'½',kids:mk(d-1),leaf:d===1?'':undefined}));const root={kids:mk(3)};(function lab(n,s){(n.kids||[]).forEach(k=>{const t=s+k.l;if(!k.kids)k.leaf=t;lab(k,t);});})(root,'');drawTree(c,W,H,root,{hl:hl?['000']:[],fs:11,leafW:40,padY:8});},['1/8','1/6','3/8','1/2'],0,'Independent flips multiply along the path: ½ × ½ × ½ = 1/8. It is 1 leaf out of 8.',{h:250}),
+  formula('Now the formula',[
+    {f:'A, B independent  ⇔  P(A ∩ B) = P(A) · P(B)',n:'The corner rectangle is width times height.'},
+    {f:'equivalently  P(B | A) = P(B)',n:'Same teal height inside and outside A.'},
+    {f:'disjoint ≠ independent',n:'Non-overlapping events with positive probability are always dependent.'}])
+];
+
+LESSONS.t1l5=[
+  ex('Add up the pieces','B₁, B₂, B₃ split the world into strips that cover everything with no overlap. Teal inside each strip is A. Drag the sliders. The total teal area is P(A), and the tree underneath is the same picture with branches.',totalExplorer),
+  mc('Strip widths 0.5, 0.3, 0.2. Teal heights 0.2, 0.5, 0.1. Total teal area?',(c,W,H,hl)=>drawMosaic(c,W,H,{cols:[{w:.5,h:.2,label:'B₁',hl,note:hl?'.10':null},{w:.3,h:.5,label:'B₂',hl,note:hl?'.15':null},{w:.2,h:.1,label:'B₃',hl,note:hl?'.02':null}],yLabel:'A'}),['0.27','0.8','0.33','0.2'],0,'Each strip contributes width × height: 0.10 + 0.15 + 0.02 = 0.27.',{h:w=>Math.min(w,290)}),
+  mc('It rains 30% of days. You are late with 0.6 chance when it rains, 0.2 when it doesn’t. P(late)?',(c,W,H,hl)=>drawTree(c,W,H,{kids:[{l:'Rain',p:'0.3',kids:[{l:'Late',p:'0.6',leaf:hl?'0.18':''},{l:'On time',p:'0.4'}]},{l:'No rain',p:'0.7',kids:[{l:'Late',p:'0.2',leaf:hl?'0.14':''},{l:'On time',p:'0.8'}]}]},{hl:hl?['00','10']:[],leafW:48}),['0.8','0.32','0.18','0.26'],1,'Two paths end in Late. Multiply along each, then add: 0.3 × 0.6 + 0.7 × 0.2 = 0.18 + 0.14 = 0.32.',{h:220}),
+  mc('Which strip adds the most teal area?',(c,W,H,hl)=>drawMosaic(c,W,H,{cols:[{w:.6,h:.1,label:'B₁',note:hl?'.06':null},{w:.3,h:.4,label:'B₂',hl,note:hl?'.12':null},{w:.1,h:.6,label:'B₃',note:hl?'.06':null}],yLabel:'A'}),['B₁ (widest)','B₂','B₃ (tallest)'],1,'Area is width times height. 0.6 × 0.1 = 0.06, 0.3 × 0.4 = 0.12, 0.1 × 0.6 = 0.06. B₂ wins even though it is neither widest nor tallest.',{h:w=>Math.min(w,290)}),
+  mc('Flip a fair coin to pick an urn, then draw one ball. P(teal)?',(c,W,H,hl)=>{coinFace(c,30,H/2,18,'H');drawUrn(c,W*.38,H/2+16,Math.min(110,W*.28),90,['r','r','r','b'],{label:'heads: urn 1',ring:hl});drawUrn(c,W*.76,H/2+16,Math.min(110,W*.28),90,['r','b','b','b'],{label:'tails: urn 2',ring:hl});if(hl)T(c,'½·¾ + ½·¼',W/2,H-10,{s:14,w:700,c:C.acc});},['1/2','3/4','1/4','3/8'],0,'Half the time you get urn 1 (3/4 teal), half the time urn 2 (1/4 teal). ½ × ¾ + ½ × ¼ = ½.',{h:190}),
+  mc('One branch label is missing. What must it be?',(c,W,H,hl)=>drawTree(c,W,H,{kids:[{l:'B₁',p:'0.6',kids:[{l:'A',p:'0.5'},{l:'Aᶜ',p:'0.5'}]},{l:'B₂',p:hl?'0.4':'?',kids:[{l:'A',p:'0.1'},{l:'Aᶜ',p:'0.9'}]}]},{hl:hl?['1']:[]}),['0.6','0.4','1.6','0.5'],1,'Branches leaving one node cover every possibility, so they add to 1. 1 − 0.6 = 0.4.',{h:200}),
+  mc('Which square has more teal in total?',(c,W,H,hl)=>{const half=W/2;c.save();c.translate(0,0);drawMosaic(c,half+20,H,{cols:[{w:.5,h:.4,label:'B₁',note:hl?'.20':null},{w:.5,h:.2,label:'B₂',note:hl?'.10':null}],vals:hl,shift:10});c.restore();c.save();c.translate(half-20,0);drawMosaic(c,half+20,H,{cols:[{w:.2,h:.9,label:'B₁',note:hl?'.18':null},{w:.8,h:.2,label:'B₂',note:hl?'.16':null}],vals:hl,shift:-10});c.restore();T(c,'Left',W*.25,H-6,{s:11,c:C.muted});T(c,'Right',W*.75,H-6,{s:11,c:C.muted});},['Left','Right','Equal'],1,'Left: 0.20 + 0.10 = 0.30. Right: 0.18 + 0.16 = 0.34. The wide short strip on the right adds more than it looks like.',{h:200}),
+  formula('Now the formula',[
+    {f:'P(A) = Σᵢ P(A | Bᵢ) · P(Bᵢ)',n:'Sum of strip areas: height times width, over every strip.'},
+    {f:'requires: Bᵢ disjoint, together cover S',n:'The strips tile the square with no gaps and no overlap.'}])
+];
+
+LESSONS.t1l6=[
+  ex('100 people, one test','Step through it. Watch who gets the condition, who the test flags, then look only at the positives.',bayesStepper),
+  ex('Same thing as a tree, with knobs','The tree’s highlighted leaves are the two ways to test positive. Drop the base rate to 1 and see how the healthy positives take over.',bayesSliders),
+  mc('Solid figures tested positive. Of everyone who tested positive, what fraction actually has the condition?',(c,W,H,hl)=>drawIcons(c,{x:8,y:8,w:W-16,h:H-16},{n:100,style:bayesStyle({s:5,tp:4,fp:19,step:hl?5:4,ring:hl})}),['4/5','4/23','5/100','4/100'],1,'Count only the solid figures: 4 teal and 19 slate, 23 positives. 4 of 23 are sick, about 17%.',{h:w=>Math.min(w*.9,300),legend:BAYES_LEG}),
+  mc('P(D) = 0.2. The test is positive with 0.8 if you have D, 0.1 if you don’t. Given a positive, P(D)?',(c,W,H,hl)=>drawTree(c,W,H,{kids:[{l:'D',p:'0.2',tone:'a',kids:[{l:'+',p:'0.8',leaf:hl?'0.16':''},{l:'−',p:'0.2'}]},{l:'not D',p:'0.8',tone:'b',kids:[{l:'+',p:'0.1',leaf:hl?'0.08':''},{l:'−',p:'0.9'}]}]},{hl:hl?['00','10']:[],leafW:46}),['0.8','2/3','0.16','0.24'],1,'Positive paths: 0.2 × 0.8 = 0.16 and 0.8 × 0.1 = 0.08. Of 0.24 total positive, 0.16 is D: 0.16 / 0.24 = 2/3.',{h:210}),
+  mc('Only 1 in 100 has it. The test catches them, plus 10 false alarms. Why are most positives healthy?',(c,W,H,hl)=>drawIcons(c,{x:8,y:8,w:W-16,h:H-16},{n:100,style:bayesStyle({s:1,tp:1,fp:10,step:hl?5:4,ring:hl})}),['The healthy group is so big that its few false alarms outnumber the sick','The test is broken','Sick people usually test negative','Positive results are random'],0,'99 healthy people at a 10% false alarm rate makes about 10 false positives. There is only 1 true positive to compete with them.',{h:w=>Math.min(w*.9,300),legend:BAYES_LEG}),
+  mc('100 emails, 30 are spam (teal). Solid: contains the word “free”. Given “free”, P(spam)?',(c,W,H,hl)=>drawIcons(c,{x:8,y:8,w:W-16,h:H-16},{n:100,style:bayesStyle({s:30,tp:24,fp:7,step:hl?5:4,ring:hl})}),['24/30','24/31','31/100','7/31'],1,'Solid figures: 24 spam, 7 normal. 31 contain “free” and 24 of them are spam.',{h:w=>Math.min(w*.9,300),legend:[[C.acc,'Spam'],[C.b,'Normal'],['#e8eaf0','Solid = has “free”']]}),
+  mc('Same test in two towns. Left: 2% have it. Right: 20% have it. Where does a positive result mean a higher chance of having it?',(c,W,H,hl)=>{const bw=(W-30)/2;drawIcons(c,{x:8,y:22,w:bw,h:H-30},{n:100,style:bayesStyle({s:2,tp:2,fp:10,step:hl?5:4})});drawIcons(c,{x:22+bw,y:22,w:bw,h:H-30},{n:100,style:bayesStyle({s:20,tp:18,fp:8,step:hl?5:4})});T(c,hl?'2 of 12 positives':'Left: 2%',8+bw/2,10,{s:12,w:650,c:hl?C.acc:C.muted});T(c,hl?'18 of 26 positives':'Right: 20%',22+bw*1.5,10,{s:12,w:650,c:hl?C.acc:C.muted});},['Left (2%)','Right (20%)','Same, it’s the same test'],1,'Left: 2 true positives among 12. Right: 18 among 26. A higher base rate means positives are more often real.',{h:210,legend:BAYES_LEG}),
+  mc('Machine 1 makes 60% of parts, 5% defective. Machine 2 makes 40%, 10% defective. A part is defective. P(it came from machine 2)?',(c,W,H,hl)=>drawTree(c,W,H,{kids:[{l:'M1',p:'0.6',kids:[{l:'Defect',p:'0.05',leaf:hl?'0.03':''},{l:'OK',p:'0.95'}]},{l:'M2',p:'0.4',kids:[{l:'Defect',p:'0.10',leaf:hl?'0.04':''},{l:'OK',p:'0.90'}]}]},{hl:hl?['00','10']:[],leafW:46}),['0.4','4/7','0.1','3/7'],1,'Defect paths: 0.6 × 0.05 = 0.03 and 0.4 × 0.10 = 0.04. M2 owns 0.04 of the 0.07 defective share: 4/7.',{h:210}),
+  formula('Now Bayes’ rule',[
+    {f:'P(A | B) = P(B | A) · P(A) / P(B)',n:'Top: the one path you care about. Bottom: all paths that end in B.'},
+    {f:'P(B) = P(B | A)P(A) + P(B | Aᶜ)P(Aᶜ)',n:'Total probability, the bottom of the fraction.'},
+    {f:'= true positives / all positives',n:'The icon array version. Counting solid figures is the formula.'}])
+];
+
+const R2=mulberry(42),EXPH=(()=>{const b=Array(10).fill(0);for(let i=0;i<400;i++){const x=-Math.log(1-R2())*1.2;if(x<5)b[Math.floor(x/.5)]++;}return b;})();
+const uni=x=>(x>=0&&x<=4)?.25:0;
+LESSONS.t2l1=[
+  ex('PMF bars, CDF staircase','X is the sum of two dice. Bars show P(X = x). Flip to the CDF and the bars stack into a staircase: its height at x is everything at or below x. The teal triangle is where the bars would balance.',pmfExplorer),
+  ex('Continuous: probability is area','A PDF is a curve. Chance of landing between a and b is the area under it. The CDF below climbs by exactly that area. Try each shape.',pdfExplorer),
+  mc('Read the bar: P(X = 2)?',(c,W,H,hl)=>drawBars(c,W,H,{xs:[0,1,2,3,4],ps:[.1,.2,.4,.2,.1],ymax:.5,yt:[0,.25,.5],hl:hl?[2]:[]}),['0.2','0.4','0.5','0.7'],1,'The bar at 2 reaches 0.4. For a PMF, the bar height is the probability.',{h:200}),
+  mc('Same PMF. P(X ≤ 1)?',(c,W,H,hl)=>drawBars(c,W,H,{xs:[0,1,2,3,4],ps:[.1,.2,.4,.2,.1],ymax:.5,yt:[0,.25,.5],hl:hl?[0,1]:[]}),['0.2','0.3','0.1','0.7'],1,'Stack the bars at 0 and 1: 0.1 + 0.2 = 0.3.',{h:200}),
+  mc('X is spread evenly over [0, 4], density 0.25. Shaded: 1 ≤ X ≤ 2. Area?',(c,W,H,hl)=>{const A=drawCurve(c,W,H,{f:uni,x0:-.5,x1:4.5,ymax:.4,shade:[1,2],hl:hl?[1,2]:null,xt:[0,1,2,3,4],yt:[0,.25]});if(hl){T(c,'width 1',A.X(1.5),A.Y(0)-10,{s:11,w:700,c:C.ink});T(c,'height 0.25',A.X(2)+6,A.Y(.25)-10,{a:'left',s:11,w:700,c:'#fff'});}},['0.25','1','0.5','0.2'],0,'A rectangle 1 wide and 0.25 tall. Area 0.25.',{h:200}),
+  mc('This is the CDF of the PMF from before. Read P(X ≤ 2).',(c,W,H,hl)=>{const A=axes(c,W,H,{x0:-1,x1:5,y0:0,y1:1.05,yt:[0,.3,.7,1],xt:[0,1,2,3,4]});const ps=[.1,.2,.4,.2,.1];let cu=0;c.strokeStyle='#e3e7ef';c.lineWidth=2.2;c.beginPath();c.moveTo(A.X(-1),A.Y(0));ps.forEach((p,i)=>{c.lineTo(A.X(i),A.Y(cu));cu+=p;c.lineTo(A.X(i),A.Y(cu));});c.lineTo(A.X(5),A.Y(1));c.stroke();
+      if(hl){c.save();c.setLineDash([4,3]);c.strokeStyle=C.acc;c.beginPath();c.moveTo(A.X(2),A.Y(0));c.lineTo(A.X(2),A.Y(.7));c.lineTo(A.l,A.Y(.7));c.stroke();c.restore();c.beginPath();c.arc(A.X(2),A.Y(.7),5,0,TAU);c.fillStyle=C.acc;c.fill();}},['0.4','0.7','0.3','1'],1,'At x = 2 the staircase has already jumped three times: 0.1 + 0.2 + 0.4 = 0.7. That is the height there.',{h:210}),
+  mc('Which bar chart is a valid PMF?',(c,W,H,hl)=>{c.fillStyle=C.muted;T(c,'Bar heights are labeled. Pick the one that could be a PMF.',W/2,H/2,{s:13,c:C.muted});},[0,1,2].map(k=>({draw:(c,W,H)=>drawBars(c,W,H,{xs:[0,1,2],ps:[[.2,.5,.3],[.3,.5,.4],[.6,-.1,.5]][k],ymax:.7,vals:true,zero:true,l:8,t:18})})),0,'Probabilities can’t be negative and must add to 1. Only 0.2 + 0.5 + 0.3 = 1 works. The middle one adds to 1.2.',{h:60,pics:true}),
+  mc('400 measurements, binned. Which PDF shape matches?',(c,W,H,hl)=>drawBars(c,W,H,{xs:EXPH.map((_,i)=>i),ps:EXPH.map(x=>x/400),ymax:.4,yt:[0,.2,.4],xf:i=>i%2?'':fmt(i*.5),hl:hl?[0,1,2]:[]}),[0,1,2].map(k=>({draw:(c,W,H)=>{const fs=[x=>Math.exp(-x),x=>Math.exp(-((x-2)**2)*2),x=>(x>=0&&x<=4)?.5:0];const A=axes(c,W,H,{x0:0,x1:4,y0:0,y1:1.1,l:6,r:6,t:6,b:8});areaPath(c,A,fs[k],0,4);c.fillStyle=acc(.25);c.fill();strokeFn(c,A,fs[k],0,4,'#e3e7ef',2);}})),0,'The tallest bins are on the far left and they keep shrinking to the right. That is the decaying shape.',{h:180,pics:true}),
+  mc('X has a bell-shaped PDF. What is P(X = exactly 1.5)?',(c,W,H,hl)=>{const f=x=>Math.exp(-x*x/2)/Math.sqrt(TAU);const A=drawCurve(c,W,H,{f,x0:-3.5,x1:3.5,ymax:.45,fill:true,xt:[-3,-2,-1,0,1,2,3],yt:[0]});c.strokeStyle=hl?C.acc:'#fff';c.lineWidth=hl?3:1.5;c.beginPath();c.moveTo(A.X(1.5),A.Y(0));c.lineTo(A.X(1.5),A.Y(f(1.5)));c.stroke();if(hl)T(c,'width 0 → area 0',A.X(1.5)+8,A.Y(f(1.5))-12,{a:'left',s:12,w:700,c:C.acc});},['f(1.5) ≈ 0.13','0','0.5','Can’t tell'],1,'A single point is a line with no width, so it has no area. For a continuous X every exact value has probability 0. The curve height is a density, not a probability.',{h:200}),
+  mc('X is uniform on [0, 4]. Which picture is its CDF?',(c,W,H,hl)=>drawCurve(c,W,H,{f:uni,x0:-.5,x1:4.5,ymax:.4,fill:true,xt:[0,1,2,3,4],yt:[0,.25]}),[0,1,2].map(k=>({draw:(c,W,H)=>{const fs=[x=>Math.max(0,Math.min(1,x/4)),x=>1/(1+Math.exp(-3*(x-2))),x=>x<2?0:1];const A=axes(c,W,H,{x0:-.5,x1:4.5,y0:0,y1:1.1,l:6,r:6,t:6,b:8});strokeFn(c,A,fs[k],-.5,4.5,'#e3e7ef',2.4);}})),0,'Flat density means the area grows at a constant rate, so the CDF is a straight ramp from 0 at x = 0 to 1 at x = 4.',{h:180,pics:true}),
+  formula('Now the definitions',[
+    {f:'PMF:  p(x) = P(X = x),  Σ p(x) = 1',n:'Bar heights. Non-negative, total 1.'},
+    {f:'PDF:  P(a ≤ X ≤ b) = ∫ₐᵇ f(x) dx',n:'Area under the curve. P(X = c) = 0.'},
+    {f:'CDF:  F(x) = P(X ≤ x)',n:'Staircase for discrete, smooth climb for continuous. F′(x) = f(x).'},
+    {f:'E[X] = Σ x p(x)   or   ∫ x f(x) dx',n:'The balance point marker. More in the next lesson.'}])
+];
+
+const TRACKS=[
+  {sub:'Track 1',title:'Probability Foundations',lessons:[['t1l1','Sample spaces & events'],['t1l2','Counting: permutations & combinations'],['t1l3','Conditional probability'],['t1l4','Independence'],['t1l5','Total probability'],['t1l6','Bayes’ rule with icon arrays']]},
+  {sub:'Track 2',title:'Random Variables',lessons:[['t2l1','PMF, PDF, and CDF'],['t2l2','Expectation'],['t2l3','Variance'],['t2l4','Bernoulli & binomial'],['t2l5','Poisson'],['t2l6','Uniform & exponential'],['t2l7','The Gaussian']]},
+  {sub:'Track 3',title:'Joint Distributions & Limit Theorems',lessons:[['t3l1','Joint PMFs & PDFs'],['t3l2','Covariance & correlation'],['t3l3','Sums of random variables'],['t3l4','Law of large numbers'],['t3l5','Central limit theorem'],['t3l6','Intro to estimation']]}
+];
+const ORDER=TRACKS.flatMap(t=>t.lessons.map(l=>l[0])).filter(id=>LESSONS[id]);
+const TITLE={};TRACKS.forEach(t=>t.lessons.forEach(([id,ti])=>TITLE[id]=ti));
+
+/* ============ state ============ */
+const KEY='ece109.progress.v1';
+let S;
+function load(){try{S=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){S={};}S=Object.assign({xp:0,done:{},streak:0,last:null,freezes:1,wrong:[],unlockAll:false},S);}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+const dayKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const dayNum=k=>{const[y,m,d]=k.split('-').map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5);};
+function shownStreak(){if(!S.last)return 0;const gap=dayNum(dayKey())-dayNum(S.last)-1;if(gap<=0)return S.streak;return gap<=S.freezes?S.streak:0;}
+function recordDay(){const t=dayKey();const r={newDay:false,used:0,earned:false};if(S.last===t)return r;r.newDay=true;
+  if(!S.last)S.streak=1;else{const gap=dayNum(t)-dayNum(S.last)-1;if(gap<=0)S.streak++;else if(gap<=S.freezes){S.freezes-=gap;r.used=gap;S.streak++;}else S.streak=1;}
+  S.last=t;if(S.streak%7===0&&S.freezes<3){S.freezes++;r.earned=true;}return r;}
+function status(id){if(!LESSONS[id])return'soon';if(S.done[id])return'done';const i=ORDER.indexOf(id);const unlocked=S.unlockAll||i===0||S.done[ORDER[i-1]];if(!unlocked)return'locked';const first=ORDER.find(x=>!S.done[x]);return first===id?'current':'open';}
+
+/* ============ icons ============ */
+const IC={
+  flame:'<svg viewBox="0 0 24 24" fill="#4fd1b5"><path d="M12 2c1 3.5 5 5.5 5 10.5A5 5 0 0 1 7 12.5c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9z"/></svg>',
+  ice:'<svg viewBox="0 0 24 24" fill="none" stroke="#8fa3c7" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 4l3 2 3-2M9 20l3-2 3 2"/></svg>',
+  xp:'<svg viewBox="0 0 24 24" fill="#e8eaf0"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="#e8eaf0" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="#e8eaf0" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="#e8eaf0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="#06231d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="#4b5262" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+};
+
+/* ============ screens ============ */
+function topBar(){
+  const t=el('div','top');t.innerHTML=`<div class="brand">ECE 109<small>Probability & Statistics</small></div>
+  <div class="pill" title="Day streak">${IC.flame}${shownStreak()}</div><div class="pill" title="Streak freezes">${IC.ice}${S.freezes}</div><div class="pill" title="XP">${IC.xp}${S.xp}</div>`;
+  const g=el('button','iconbtn',IC.gear);g.setAttribute('aria-label','Settings');g.onclick=settings;t.appendChild(g);return t;
+}
+function home(){
+  cleanup();app.innerHTML='';window.scrollTo(0,0);app.appendChild(topBar());const m=el('div','main');app.appendChild(m);
+  const td=S.last===dayKey();const tdy=el('div','today'+(td?' done':''));
+  tdy.innerHTML=`<div class="dot"></div><p>${td?'<b>Today counts.</b> Anything else is extra.':'<b>One lesson today</b> keeps the streak going. Missed days get covered by freezes, nothing piles up.'}</p>`;m.appendChild(tdy);
+  const r=el('div','row2');const rv=el('button','tile',`<b>Review</b><span>${S.wrong.length?S.wrong.length+' to revisit':'Nothing to revisit yet'}</span>`);rv.onclick=startReview;
+  const lb=el('button','tile','<b>Labs</b><span>Dice roller, CLT sampler, shape explorer</span>');lb.onclick=labs;r.append(rv,lb);m.appendChild(r);
+  TRACKS.forEach(tr=>{const sec=el('section','track');const built=tr.lessons.filter(l=>LESSONS[l[0]]).length;const dn=tr.lessons.filter(l=>S.done[l[0]]).length;
+    sec.appendChild(el('div','trackhead',`<div><small>${tr.sub}</small><h2>${tr.title}</h2></div><span class="count">${built?dn+' / '+tr.lessons.length:'coming soon'}</span>`));
+    const path=el('div','path');sec.appendChild(path);m.appendChild(sec);buildPath(path,tr.lessons);});
+}
+function buildPath(path,ls){
+  const step=132,offs=[0,.6,.85,.45,-.2,-.65,-.85,-.4],W=path.clientWidth||340,amp=Math.min(80,W/2-80);path.style.height=(ls.length*step)+'px';
+  const pts=ls.map((_,i)=>[W/2+offs[i%offs.length]*amp,38+i*step]);
+  let d=`M${pts[0][0]} ${pts[0][1]}`;for(let i=1;i<pts.length;i++){const[a,b]=pts[i-1],[c,e]=pts[i];d+=` C${a} ${b+56},${c} ${e-56},${c} ${e}`;}
+  path.insertAdjacentHTML('beforeend',`<svg class="conn" viewBox="0 0 ${W} ${ls.length*step}" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="#2a303b" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/></svg>`);
+  ls.forEach(([id,title],i)=>{const st=status(id);const n=el('div','node '+st);n.style.left=pts[i][0]+'px';n.style.top=(pts[i][1]-32)+'px';
+    const inner=st==='done'?IC.check:st==='locked'?IC.lock:st==='soon'?'':(i+1);
+    const b=el('button',null,`<div class="disc">${inner}</div><div class="lbl">${title}</div>${st==='soon'?'<div class="tag">soon</div>':''}`);
+    b.disabled=st==='locked'||st==='soon';b.setAttribute('aria-label',title+' ('+st+')');b.onclick=()=>startLesson(id);n.appendChild(b);path.appendChild(n);});
+}
+let RUN;
+function startLesson(id){RUN={id,steps:LESSONS[id].map((s,k)=>({...s,key:id+':'+k})),i:0,qs:0,first:0,review:false};renderStep();}
+function startReview(){if(!S.wrong.length){cleanup();app.innerHTML='';app.appendChild(simpleHead('Review'));const m=el('div','main');m.appendChild(el('div','empty','<p>Nothing to revisit. Questions you miss in lessons will show up here so you can see them again.</p>'));app.appendChild(m);return;}
+  const keys=S.wrong.slice().sort(()=>Math.random()-.5).slice(0,8);const steps=keys.map(k=>{const[id,ix]=k.split(':');const s=LESSONS[id]&&LESSONS[id][+ix];return s?{...s,key:k}:null;}).filter(Boolean);
+  if(!steps.length){S.wrong=[];save();return home();}RUN={id:'review',steps,i:0,qs:0,first:0,review:true};renderStep();}
+function simpleHead(t){const h=el('div','top');const b=el('button','iconbtn',IC.back);b.setAttribute('aria-label','Back');b.onclick=home;h.appendChild(b);h.appendChild(el('div','brand',t));return h;}
+function renderStep(){
+  cleanup();app.innerHTML='';window.scrollTo(0,0);const st=RUN.steps[RUN.i];
+  const head=el('div','lhead');const x=el('button','iconbtn',IC.x);x.setAttribute('aria-label','Leave lesson');x.onclick=home;head.appendChild(x);
+  const bar=el('div','bar','<i></i>');head.appendChild(bar);app.appendChild(head);requestAnimationFrame(()=>bar.firstChild.style.width=(100*RUN.i/RUN.steps.length)+'%');
+  const body=el('div','lbody');app.appendChild(body);const foot=el('div','lfoot');app.appendChild(foot);
+  const next=()=>{RUN.i++;RUN.i>=RUN.steps.length?finish():renderStep();};
+  if(st.type==='explore'){body.appendChild(el('div','kicker',RUN.i===0?'Look first':'Explore'));const host=el('div');body.appendChild(host);st.build(host);
+    body.appendChild(el('h3','ttl',st.title));body.appendChild(el('p','txt',st.body));const b=el('button','btn','Continue');b.onclick=next;foot.appendChild(b);}
+  else if(st.type==='formula'){body.appendChild(el('div','kicker','Formula last'));body.appendChild(el('h3','ttl',st.title));
+    st.lines.forEach(l=>{const f=el('div','formula');f.appendChild(el('div','f',l.f));f.appendChild(el('div','n',l.n));body.appendChild(f);});
+    const b=el('button','btn','Finish lesson');b.onclick=next;foot.appendChild(b);}
+  else renderMC(st,body,foot,next);
+}
+function renderMC(st,body,foot,next){
+  RUN.qs++;let hl=false,sel=-1,checked=false;
+  body.appendChild(el('div','kicker',RUN.review?'Review':'Question'));
+  const v=mkCanvas(body,st.h||220,(c,W,H)=>st.draw(c,W,H,hl));if(st.legend)legend(body,st.legend);
+  body.appendChild(el('div','prompt',st.prompt));
+  const box=el('div','opts'+(st.pics?' pics':''));body.appendChild(box);
+  const btns=st.options.map((o,k)=>{const b=el('button','opt');if(typeof o==='string')b.textContent=o;else{mkCanvas(b,74,o.draw);b.appendChild(el('small',null,'Option '+'ABC'[k]));}
+    b.onclick=()=>{if(checked)return;sel=k;btns.forEach((x,i)=>x.classList.toggle('sel',i===k));cb.disabled=false;};box.appendChild(b);return b;});
+  const cb=el('button','btn','Check');cb.disabled=true;foot.appendChild(cb);
+  cb.onclick=()=>{if(checked){next();return;}checked=true;const ok=sel===st.ans;btns.forEach(b=>{b.disabled=true;b.classList.remove('sel');});btns[st.ans].classList.add('right');
+    if(!ok){btns[sel].classList.add('picked');hl=true;v.redraw();if(!RUN.review&&!S.wrong.includes(st.key))S.wrong.push(st.key);}
+    else{RUN.first++;if(RUN.review)S.wrong=S.wrong.filter(k=>k!==st.key);}
+    save();
+    const fb=el('div','fb'+(ok?' good':''),`<h4>${ok?pick(['Right.','Yes.','Exactly.','Correct.']):'Look at the highlighted part.'}</h4><p>${st.explain}</p>`);foot.insertBefore(fb,cb);
+    cb.textContent='Continue';if(!ok)v.wrap.scrollIntoView({behavior:'smooth',block:'start'});};
+}
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function finish(){
+  cleanup();app.innerHTML='';window.scrollTo(0,0);const rev=RUN.review,first=!rev&&!S.done[RUN.id];
+  const gain=rev?5+RUN.first:(first?10:5)+2*RUN.first;S.xp+=gain;if(!rev)S.done[RUN.id]=true;const r=recordDay();save();
+  const d=el('div','done');d.innerHTML=`<svg class="check" viewBox="0 0 110 110"><circle class="ring" cx="55" cy="55" r="48"/><path class="tick" d="M33 57l15 15 30-32"/></svg>
+  <h2>${rev?'Review done':'Lesson complete'}</h2><p class="note">${rev?'Questions you got right this time leave the review pile.':TITLE[RUN.id]}</p>
+  <div class="stats"><div class="stat"><b>+${gain}</b><span>XP</span></div><div class="stat"><b>${RUN.first}/${RUN.qs}</b><span>first try</span></div><div class="stat"><b>${S.streak}</b><span>day streak</span></div></div>
+  <p class="note">${r.used?`A freeze covered ${r.used===1?'a missed day':r.used+' missed days'}. `:''}${r.earned?'You earned a streak freeze. ':''}${!r.newDay?'Today already counted.':''}</p>`;
+  const b=el('button','btn','Back to the path');b.style.marginTop='26px';b.onclick=home;d.appendChild(b);app.appendChild(d);
+}
+function labs(){
+  cleanup();app.innerHTML='';window.scrollTo(0,0);app.appendChild(simpleHead('Labs'));const m=el('div','main');app.appendChild(m);
+  const sec=(t,p,fn)=>{const s=el('div','labsec');s.appendChild(el('h3',null,t));s.appendChild(el('p',null,p));m.appendChild(s);fn(s);};
+  sec('Coin and dice roller','Every roll lands in a bar. The dashed lines are the long-run heights. More rolls, closer fit.',h=>rollerWidget(h,{mode:'die',modes:['coin','die','sum2','coins2']}));
+  sec('Sampling simulator','Draw n values from a lopsided population and average them. Pile up the averages. Even from a skewed or flat start, the pile turns into a bell, and it gets narrower as n grows. That is the central limit theorem.',cltWidget);
+  sec('Balance point and spread','The teal triangle is the mean: where the shape would balance on a finger. On a skewed shape it slides toward the long tail and away from the peak. The spread slider widens and narrows the curve; the white bar is one SD each side.',shapeWidget);
+}
+function settings(){
+  const sh=el('div','sheet');const p=el('div');sh.appendChild(p);sh.onclick=e=>{if(e.target===sh)sh.remove();};
+  p.appendChild(el('h3',null,'Settings'));
+  const r1=el('div','rowt','<div><b>Unlock all lessons</b><p>Skip ahead without finishing earlier ones.</p></div>');const sw=el('button','sw'+(S.unlockAll?' on':''));sw.setAttribute('aria-label','Unlock all lessons');sw.onclick=()=>{S.unlockAll=!S.unlockAll;save();sw.classList.toggle('on',S.unlockAll);home();document.body.appendChild(sh);};r1.appendChild(sw);p.appendChild(r1);
+  const r2=el('div','rowt','<div><b>Streak rules</b><p>One lesson or review a day counts. Extra lessons do not bank days. Freezes cover missed days automatically. You get one at the start and another every 7-day streak, up to 3.</p></div>');p.appendChild(r2);
+  const r3=el('div','rowt','<div><b>Reset progress</b><p>Clears XP, streak, completed lessons and review pile.</p></div>');let armed=false;const rb=el('button','cbtn','Reset');rb.onclick=()=>{if(!armed){armed=true;rb.textContent='Tap again';return;}try{localStorage.removeItem(KEY);}catch(e){}load();sh.remove();home();};r3.appendChild(rb);p.appendChild(r3);
+  const cl=el('button','btn ghost','Close');cl.style.marginTop='16px';cl.onclick=()=>sh.remove();p.appendChild(cl);
+  document.body.appendChild(sh);
+}
+let rT,lastIW=window.innerWidth;window.addEventListener('resize',()=>{if(window.innerWidth===lastIW)return;lastIW=window.innerWidth;clearTimeout(rT);rT=setTimeout(()=>{if(app.querySelector('.path'))home();},200);});
+load();home();
+</script>
+</body>
+</html>
